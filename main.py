@@ -7,12 +7,10 @@ from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from rembg import remove
 
-# =================== المفاتيح والمتغيرات الأساسية ===================
+# =================== البيانات الأساسية الخاصة بك ===================
 TELEGRAM_BOT_TOKEN = "8863269193:AAFC8GH3QlMIaypS7xZLoSHb0bhoyfGKuuc"
 POLLINATIONS_API_KEY = "sk_1uA0RH6GnFEZOHl3Tgw1mpHlSGvcBt7W"
-
-# ضع هنا رابط موقع الـ WebApp الخاص بك على Vercel أو GitHub Pages (يجب أن يبدأ بـ https://)
-WEBAPP_URL = "https://your-webapp-link.vercel.app"
+WEBAPP_URL = "https://ga9trading9-web.github.io/Al-giloka/"
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
