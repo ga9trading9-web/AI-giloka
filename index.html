@@ -63,13 +63,13 @@
   <script>
     Telegram.WebApp.ready();
 
-    // ضع هنا أكواد الـ 5 وحدات إعلانية (Social Bar) الخاصة بك من Adsterra بالترتيب
+    // وحدات الإعلانات الـ 5 مدمجة بالترتيب
     const adUnits = [
-      `<!-- وحدة إعلانية 1 --> <script type="text/javascript" src="//plX1.g00gfe.com/xx/yy/zz.js"><\/script>`,
-      `<!-- وحدة إعلانية 2 --> <script type="text/javascript" src="//plX2.g00gfe.com/xx/yy/zz.js"><\/script>`,
-      `<!-- وحدة إعلانية 3 --> <script type="text/javascript" src="//plX3.g00gfe.com/xx/yy/zz.js"><\/script>`,
-      `<!-- وحدة إعلانية 4 --> <script type="text/javascript" src="//plX4.g00gfe.com/xx/yy/zz.js"><\/script>`,
-      `<!-- وحدة إعلانية 5 --> <script type="text/javascript" src="//plX5.g00gfe.com/xx/yy/zz.js"><\/script>`
+      `<script data-cfasync="false" src="https://bicea.org/14/df2d6a7eb967d39f43aedcba2e7025e3"><\/script>`,
+      `<script data-cfasync="false" src="https://bicea.org/14/a02258ff6bde5d79eabd354c6b6ae4fe"><\/script>`,
+      `<script data-cfasync="false" src="https://bicea.org/14/7573af3fb12c404e7b67ab37d9ee79ef"><\/script>`,
+      `<script data-cfasync="false" src="https://bicea.org/14/4cc54663ad5835e4c0629ed1e2306172"><\/script>`,
+      `<script data-cfasync="false" src="https://bicea.org/14/f4e4d48ae9525c9596eb6c2f32c5d030"><\/script>`
     ];
 
     let currentAdIndex = 0;
@@ -81,14 +81,14 @@
       scriptContainer.innerHTML = adUnits[currentAdIndex];
       adBox.appendChild(scriptContainer);
       
-      // التبديل للوحدة التالية تدويرياً (من 0 إلى 4 ثم يعود للصفر)
+      // التبديل للوحدة التالية تدويرياً كل 30 ثانية
       currentAdIndex = (currentAdIndex + 1) % adUnits.length;
     }
 
     // تشغيل أول إعلان فور فتح الصفحة
     rotateAd();
 
-    // تدوير الإعلان تلقائياً كل 30 ثانية (30000 ميلي ثانية)
+    // تدوير الإعلانات تلقائياً كل 30 ثانية
     setInterval(rotateAd, 30000);
   </script>
 
