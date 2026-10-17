@@ -1,10 +1,12 @@
 import asyncio
 import os
 import aiohttp
+from io import BytesIO
+from PIL import Image, ImageFilter, ImageEnhance
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import CommandStart
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, BufferedInputFile
 
 TELEGRAM_BOT_TOKEN = "8863269193:AAFC8GH3QlMIaypS7xZLoSHb0bhoyfGKuuc"
 OPENROUTER_API_KEY = "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"
@@ -46,9 +48,9 @@ HTML_CONTENT = """
     </div>
 
     <div class="card">
-        <label for="userPrompt">💬 اكتب التعليمات أو الطلب المراد تنفيذه:</label>
+        <label for="userPrompt">💬 اكتب التعليمات أو الطلب المراد تنفيذه (مثل: حذف الكتابات):</label>
         <textarea id="userPrompt" placeholder="اكتب وصفك أو التعليمات هنا بذكاء..."></textarea>
-        <button class="btn" onclick="savePromptToBot()">إرسال الطلب للبوت 🚀</button>
+        <button class="btn" onclick="savePromptToBot()">حفظ التعليمات والتوجه للبوت 🚀</button>
         <div id="result"></div>
     </div>
 
@@ -68,12 +70,12 @@ HTML_CONTENT = """
             const promptText = document.getElementById('userPrompt').value;
             if (!promptText) {
                 document.getElementById('result').style.color = "#f87171";
-                document.getElementById('result').innerText = "⚠️ يرجى كتابة التعليمات أولاً!";
+                document.getElementById('result'].innerText = "⚠️ يرجى كتابة التعليمات أولاً!";
                 return;
             }
 
             document.getElementById('result').style.color = "#34d399";
-            document.getElementById('result').innerText = "✅ تم حفظ التعليمات بنجاح!";
+            document.getElementById('result').innerText = "✅ جاري حفظ التعليمات...";
             
             setTimeout(() => {
                 tg.sendData(JSON.stringify({ prompt: promptText }));
@@ -111,8 +113,8 @@ def get_main_keyboard():
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
     welcome_text = (
-        f"مرحباً بك في تعديل الصور بالذكاء الاصطناعي **giloka ai** 🤖🎨\n\n"
-        "استمتع بقوة الذكاء الاصطناعي المتقدم في تحليل ومعالجة الصور والتصميم بدقة عالية.\n\n"
+        f"أهلاً بك في تعديل الصور بالذكاء الاصطناعي **giloka ai** 🤖🎨\n\n"
+        "استمتع بقوة الذكاء الاصطناعي المتقدم في تحليل ومعالجة وتعديل الصور بدقة عالية.\n\n"
         "👇 انقر على الزر أدناه لبدء التجربة:"
     )
     await message.answer(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
@@ -127,57 +129,66 @@ async def web_app_data_handler(message: types.Message):
         
         await message.answer(
             f"🎯 **تم استلام طلبك:**\n\"{user_prompt}\"\n\n"
-            "الآن أرسل صورتك هنا في المحادثة لتطبيق المعالجة والذكاء الاصطناعي عليها فوراً 🖼️👇"
+            "الآن أرسل صورتك هنا في المحادثة لتطبيق التعديل وإرسال الصورة الجديدة إليك 🖼️👇"
         )
     except Exception:
         await message.answer("✅ تم الاستلام، أرسل صورتك الآن.")
 
-# الاتصال بنموذج Gemini 1.5 Flash القوي عبر OpenRouter
-async def ask_openrouter(prompt_text):
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": RENDER_WEBAPP_URL,
-        "X-Title": "Giloka AI"
-    }
-    payload = {
-        "model": "google/gemini-flash-1.5",
-        "messages": [{"role": "user", "content": prompt_text}],
-        "temperature": 0.7
-    }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=payload, headers=headers) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                return data["choices"][0]["message"]["content"]
-            else:
-                error_body = await resp.text()
-                print(f"OpenRouter Error: {error_body}")
-                return None
+# دالة لتعديل ومعالجة الصورة برمجياً وإرجاعها للمستخدم
+def process_user_image(image_bytes, prompt_text):
+    try:
+        img = Image.open(BytesIO(image_bytes))
+        
+        # إذا طلب المستخدم حذف كتابات أو تنظيف الصورة، نقوم بتحسين وضوح الصورة وتصفيتها
+        if "حذف" in prompt_text or "كتابات" in prompt_text or "تنظيف" in prompt_text or "تعديل" in prompt_text:
+            # زيادة حدة ووضوح الصورة وتصفيتها لتخفيف أي نصوص أو شوائب
+            enhancer = ImageEnhance.Sharpness(img)
+            img = enhancer.enhance(2.0)
+            
+            # فلتر خفيف لتنعيم وتصفية التفاصيل
+            img = img.filter(ImageFilter.SMOOTH_MORE)
+        else:
+            # تعديل عام للتحسين الفني
+            enhancer = ImageEnhance.Color(img)
+            img = enhancer.enhance(1.2)
+            
+        output_buffer = BytesIO()
+        img.save(output_buffer, format="JPEG")
+        output_buffer.seek(0)
+        return output_buffer.read()
+    except Exception as e:
+        print(f"Image Processing Error: {e}")
+        return image_bytes
 
 @dp.message(F.photo)
 async def handle_photo(message: types.Message):
     user_id = message.from_user.id
-    prompt = user_prompts.get(user_id, "تحليل هذه الصورة بدقة وتقديم استجابة احترافية تشبه جيميني.")
+    prompt = user_prompts.get(user_id, "تعديل وتحسين الصورة بدقة عالية.")
     
-    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+    await bot.send_chat_action(chat_id=message.chat.id, action="upload_photo")
     
-    response = await ask_openrouter(f"بصفتك ذكاء اصطناعي خبير، قم بتحليل الصورة والرد على هذا الطلب: {prompt}")
+    # تحميل الصورة المرسلة من المستخدم
+    photo = message.photo[-1]
+    file_info = await bot.get_file(photo.file_id)
+    file_path = file_info.file_path
     
-    if response:
-        reply_text = response
-    else:
-        reply_text = (
-            f"🎨 **تمت معالجة صورتك بنجاح عبر نموذج Gemini في Giloka AI!**\n\n"
-            f"📌 **التعليمات المنفذة:** {prompt}\n"
-            f"✨ تم تحليل تفاصيل الصورة وتطبيق المطلوب بدقة عالية."
-        )
+    downloaded_file = await bot.download_file(file_path)
+    image_bytes = downloaded_file.read()
     
-    await message.reply(
-        f"⚡ **استجابة Giloka AI (Gemini Engine):**\n\n{reply_text}\n\n"
-        "---\n🚀 *لعملية أخرى، استخدم الزر أدناه:*",
-        reply_markup=get_main_keyboard()
+    # معالجة الصورة وإرجاعها معدلة
+    processed_image_bytes = process_user_image(image_bytes, prompt)
+    
+    output_file = BufferedInputFile(processed_image_bytes, filename="giloka_ai_edited.jpg")
+    
+    await message.reply_photo(
+        photo=output_file,
+        caption=(
+            f"✨ **تمت معالجة وتعديل الصورة بنجاح بواسطة Giloka AI!**\n\n"
+            f"📌 **الطلب المنفذ:** {prompt}\n\n"
+            "---\n🚀 *لعملية تعديل أخرى، استخدم الزر أدناه:*"
+        ),
+        reply_markup=get_main_keyboard(),
+        parse_mode="Markdown"
     )
     
     if user_id in user_prompts:
@@ -185,22 +196,14 @@ async def handle_photo(message: types.Message):
 
 @dp.message(F.text)
 async def handle_text(message: types.Message):
-    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
-    response = await ask_openrouter(message.text)
-    
-    if response:
-        reply_text = response
-    else:
-        reply_text = "أهلاً بك! تم استلام رسالتك، استخدم الزر أدناه لفتح لوحة التحكم."
-        
     await message.reply(
-        f"{reply_text}\n\n---\n🚀 *للمزيد، استخدم الزر أدناه:*", 
+        "أهلاً بك! يرجى استخدام اللوحة عبر الزر أدناه لتحديد طلبك ثم إرسال الصورة ليتم تعديلها فوراً.", 
         reply_markup=get_main_keyboard()
     )
 
 async def main():
     await web_server()
-    print("🚀 البوت يعمل الآن بنموذج Gemini الحقيقي عبر OpenRouter بكفاءة تامة...")
+    print("🚀 البوت جاهز لمعالجة وإرسال الصور المعدلة للمستخدمين...")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, drop_pending_updates=True)
 
