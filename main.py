@@ -7,7 +7,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
 TELEGRAM_BOT_TOKEN = "8863269193:AAFC8GH3QlMIaypS7xZLoSHb0bhoyfGKuuc"
-POLLINATIONS_API_KEY = "sk_1uA0RH6GnFEZOHl3Tgw1mpHlSGvcBt7W"
+GROQ_API_KEY = "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"
 RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -21,7 +21,7 @@ HTML_CONTENT = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مساعد Giloka AI الذكي</title>
+    <title>لوحة خدمات Giloka AI المدعومة بـ Groq</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { font-family: Tahoma, sans-serif; background: #0f172a; color: #fff; text-align: center; padding: 15px; margin: 0; }
@@ -37,12 +37,12 @@ HTML_CONTENT = """
     </style>
 </head>
 <body>
-    <h2>🧠 لوحة تفكير وتحليل Giloka AI</h2>
-    <p>أدخل طلبك بدقة، تماماً مثل محادثات Gemini.</p>
+    <h2>⚡ لوحة تحكم Groq AI الخارقة</h2>
+    <p>اكتب طلبك أو سؤالك بدقة لتحصل على أسرع استجابة ذكية.</p>
     
     <div class="card">
-        <label for="userPrompt">💬 اطلب ما تريد تنفيذه على صورتك:</label>
-        <textarea id="userPrompt" placeholder="مثال: اشرح لي ما في الصورة، أو أعطني التعليمات الدقيقة لتعديلها..."></textarea>
+        <label for="userPrompt">💬 اكتب ما تريد تنفيذه أو الاستفسار عنه:</label>
+        <textarea id="userPrompt" placeholder="اكتب طلبك هنا..."></textarea>
         
         <button class="btn" onclick="savePromptToBot()">إرسال الطلب للبوت 🚀</button>
         <div id="result"></div>
@@ -99,7 +99,7 @@ async def web_server():
 def get_main_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
-            text="✨ فتح لوحة الذكاء الاصطناعي والإعلانات", 
+            text="✨ فتح لوحة Groq الذكية والإعلانات", 
             web_app=WebAppInfo(url=f"{RENDER_WEBAPP_URL}/")
         )]
     ])
@@ -107,9 +107,9 @@ def get_main_keyboard():
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
     text = (
-        f"أهلاً بك يا {message.from_user.first_name} في بوت الذكاء الاصطناعي الاحترافي! 🤖\n\n"
-        "1️⃣ افتح اللوحة واكتب طلبك بدقة (بنفس نمط Gemini).\n"
-        "2️⃣ أرسل صورتك، وسأقوم بتحليلها وتنفيذ المطلوب بدقة عالية وبدون صور عشوائية!"
+        f"أهلاً بك يا {message.from_user.first_name} في بوت Giloka AI المدعوم بـ Groq الخارق! 🤖⚡\n\n"
+        "1️⃣ افتح اللوحة وأدخل طلبك أو سؤالك.\n"
+        "2️⃣ أرسل صورتك أو رسالتك وسأقوم بالرد عليك بسرعة ودقة مذهلة!"
     )
     await message.answer(text, reply_markup=get_main_keyboard())
 
@@ -122,48 +122,52 @@ async def web_app_data_handler(message: types.Message):
         user_prompts[message.from_user.id] = user_prompt
         
         await message.answer(
-            f"✅ **تم استلام طلبك باحترافية:**\n\"{user_prompt}\"\n\n"
-            "الآن أرسل صورتك هنا في المحادثة وسيقوم النظام الذكي بالرد عليك وتنفيذ طلبك بدقة تامة 🖼️👇"
+            f"✅ **تم تسجيل طلبك:**\n\"{user_prompt}\"\n\n"
+            "الآن أرسل صورتك أو رسالتك هنا في المحادثة ليعالجها الذكاء الاصطناعي فوراً 🖼️👇"
         )
     except Exception:
-        await message.answer("✅ تم الاستلام، أرسل صورتك الآن.")
+        await message.answer("✅ تم الاستلام، أرسل رسالتك الآن.")
+
+# دالة الاتصال المباشر بـ Groq API
+async def ask_groq(prompt_text):
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
+            {
+                "role": "system",
+                "content": "أنت مساعد ذكاء اصطناعي خبير ودقيق جداً ومحترف، أجب على المستخدم بكل دقة واحترافية."
+            },
+            {
+                "role": "user",
+                "content": prompt_text
+            }
+        ]
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=payload, headers=headers) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                return data["choices"][0]["message"]["content"]
+            else:
+                return "عذراً، حدث ضغط مؤقت في خوادم Groq، يرجى المحاولة لاحقاً."
 
 @dp.message(F.photo)
 async def handle_photo(message: types.Message):
     user_id = message.from_user.id
-    prompt = user_prompts.get(user_id, "تحليل الطلب وتوليد الاستجابة الدقيقة")
+    prompt = user_prompts.get(user_id, "تحليل هذه الصورة وتقديم الاستجابة المناسبة")
     
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     
     try:
-        # ربط الطلب بنموذج ذكاء اصطناعي متطور يعطيك دقة تحليل تشبه Gemini تماماً
-        headers = {"Authorization": f"Bearer {POLLINATIONS_API_KEY}"}
-        payload = {
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "أنت مساعد ذكاء اصطناعي خبير ودقيق جداً مثل Gemini. قم بالرد على المستخدم بناءً على طلبه بدقة واحترافية عالية بدون أي عشوائية."
-                },
-                {
-                    "role": "user", 
-                    "content": f"لقد أرسل المستخدم صورة وطلب التنفيذ التالي بدقة: '{prompt}'. قم بتحليل الأمر وقدم له الرد الفني والحلول أو النتيجة الاحترافية المفصلة."
-                }
-            ],
-            "model": "openai"
-        }
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.post("https://text.pollinations.ai/", json=payload, headers=headers) as resp:
-                if resp.status == 200:
-                    gemini_like_response = await resp.text()
-                else:
-                    gemini_like_response = "تم استقبال صورتك وتعليماتك بنجاح، ويتم معالجتها بالدقة المطلوبة."
-        
+        reply_text = await ask_groq(f"المستخدم أرسل صورة وطلب المعالجة التالية: {prompt}")
         await message.reply(
-            f"🎯 **استجابة الذكاء الاصطناعي (بنمط Gemini):**\n\n"
-            f"📌 **الطلب:** {prompt}\n\n"
-            f"💡 **النتيجة والتحليل الدقيق:**\n{gemini_like_response}\n\n"
-            "---\n🚀 *لطلب تحليل أو تعديل جديد، افتح اللوحة عبر الزر أدناه:*",
+            f"⚡ **استجابة Groq الذكية:**\n\n{reply_text}\n\n"
+            "---\n🚀 *لطلب جديد، افتح اللوحة عبر الزر أدناه:*",
             reply_markup=get_main_keyboard()
         )
     except Exception:
@@ -176,27 +180,17 @@ async def handle_photo(message: types.Message):
 async def handle_text(message: types.Message):
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     try:
-        headers = {"Authorization": f"Bearer {POLLINATIONS_API_KEY}"}
-        payload = {
-            "messages": [{"role": "user", "content": message.text}],
-            "model": "openai"
-        }
-        async with aiohttp.ClientSession() as session:
-            async with session.post("https://text.pollinations.ai/", json=payload, headers=headers) as resp:
-                if resp.status == 200:
-                    reply_text = await resp.text()
-                else:
-                    reply_text = "عذراً، حدث ضغط مؤقت، يرجى المحاولة لاحقاً."
+        reply_text = await ask_groq(message.text)
         await message.reply(
-            f"{reply_text}\n\n---\n🚀 *المزيد من الأدوات عبر الزر أدناه:*", 
+            f"{reply_text}\n\n---\n🚀 *المزيد عبر الزر أدناه:*", 
             reply_markup=get_main_keyboard()
         )
     except Exception:
-        await message.reply("حدث خطأ غير متوقع.")
+        await message.reply("عذراً، حدث خطأ غير متوقع.")
 
 async def main():
     await web_server()
-    print("🚀 البوت والواجهة يعملان الآن بنجاح...")
+    print("🚀 البوت مدعوم بـ Groq ويعمل بكامل قوة السرعة...")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, drop_pending_updates=True)
 
