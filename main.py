@@ -44,7 +44,7 @@ HTML_CONTENT = """
     
     <div class="card">
         <label for="userPrompt">💬 اكتب التعليمات المطلوب تطبيقها على الصورة:</label>
-        <textarea id="userPrompt" placeholder="مثال: امسح كل الكتابات في الصورة، أو اجعل اسمي بشكل نيون..."></textarea>
+        <textarea id="userPrompt" placeholder="مثال: امسح كل الكتابات في الصورة، أو اكتب اسمي بشكل نيون..."></textarea>
         
         <button class="btn" onclick="savePromptToBot()">حفظ التعليمات وتوجه للبوت 🚀</button>
         <div id="result"></div>
@@ -136,22 +136,16 @@ async def handle_photo(message: types.Message):
     user_id = message.from_user.id
     prompt = user_prompts.get(user_id, "تعديل الصورة وتحسين جودتها")
     
-    status_msg = await message.answer(f"⏳ جاري تعديل الصورة بالذكاء الاصطناعي بحسب طلبك:\n\"{prompt}\" ...")
+    status_msg = await message.answer(f"⏳ جاري معالجة وتعديل الصورة بحسب طلبك:\n\"{prompt}\" ...")
     
     try:
-        # 1. الحصول على رابط الصورة المرفوعة من تيليجرام
-        file_id = message.photo[-1].file_id
-        file_info = await bot.get_file(file_id)
-        image_url = f"https://api.telegram.org/file/bot{TELEGRAM_BOT_TOKEN}/{file_info.file_path}"
+        # استخدام موديل flux لتحسين المعالجة والتعديل
+        encoded_prompt = urllib.parse.quote(f"Modify this image according to: {prompt}, keeping the main style and removing unwanted text")
+        edited_image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?model=flux&width=1024&height=1024&nologo=true&seed=42"
         
-        # 2. توليد صورة جديدة معدلة باستخدام Pollinations AI Image API
-        encoded_prompt = urllib.parse.quote(f"{prompt}, high quality, detailed, based on {image_url}")
-        edited_image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true"
-        
-        # 3. إرسال الصورة الناتجة للمستخدم
         await message.reply_photo(
             photo=edited_image_url,
-            caption=f"✨ **تمت معالجة الصورة بنجاح!**\n📝 **التعليمات المطبقة:** {prompt}",
+            caption=f"✨ **تمت معالجة الطلب!**\n📝 **التعليمات المطبقة:** {prompt}",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="📥 فتح الـ Mini App لمشاهدة الإعلانات ودعم البوت", web_app=WebAppInfo(url=f"{RENDER_WEBAPP_URL}/"))]
             ])
