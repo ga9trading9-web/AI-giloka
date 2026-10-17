@@ -8,11 +8,12 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
 TELEGRAM_BOT_TOKEN = "8863269193:AAFC8GH3QlMIaypS7xZLoSHb0bhoyfGKuuc"
 POLLINATIONS_API_KEY = "sk_1uA0RH6GnFEZOHl3Tgw1mpHlSGvcBt7W"
+RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 
-# محتوى صفحة الـ WebApp (الواجهة المدمجة لتجنب أخطاء 404)
+# محتوى صفحة الـ WebApp المدمجة لتجنب أخطاء 404
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -63,32 +64,26 @@ async def web_server():
     except Exception:
         pass
 
-def get_main_keyboard(render_url):
-    webapp_url = f"{render_url}/"
+def get_main_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text="✨ فتح شاشة الذكاء الاصطناعي والإعلانات", 
-            web_app=WebAppInfo(url=webapp_url)
+            web_app=WebAppInfo(url=f"{RENDER_WEBAPP_URL}/")
         )]
     ])
 
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
-    # الحصول على رابط السيرفر الأساسي على Render لتوجيه الـ WebApp إليه تلقائياً
-    # (يمكنك استبدال الرابط أدناه برابط تطبيقك الفعلي على Render لتثبيته)
-    render_domain = os.environ.get("RENDER_EXTERNAL_URL", "https://ai-giloka.onrender.com")
-    
     text = (
         f"أهلاً بك يا {message.from_user.first_name} في بوت الذكاء الاصطناعي والميزات المتقدمة! 🤖\n\n"
         "💬 **الدردشة:** أرسل لي أي سؤال وسأجيبك فوراً.\n"
         "🖼️ **الصور:** لمعالجة الصور وإزالة الخلفيات بوضوح عالي، استخدم الزر أدناه.\n\n"
         "اضغط على الزر أدناه لفتح لوحة الخدمات والمكافآت 👇"
     )
-    await message.answer(text, reply_markup=get_main_keyboard(render_domain))
+    await message.answer(text, reply_markup=get_main_keyboard())
 
 @dp.message(F.text)
 async def handle_text(message: types.Message):
-    render_domain = os.environ.get("RENDER_EXTERNAL_URL", "https://ai-giloka.onrender.com")
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     try:
         headers = {"Authorization": f"Bearer {POLLINATIONS_API_KEY}"}
@@ -105,15 +100,25 @@ async def handle_text(message: types.Message):
         await message.reply(
             f"{reply_text}\n\n---\n🚀 *المزيد من الأدوات عبر الزر أدناه:*", 
             parse_mode="Markdown",
-            reply_markup=get_main_keyboard(render_domain)
+            reply_markup=get_main_keyboard()
         )
     except Exception:
-        await message.reply("حدث خطأ غير متوقع، يرجى المحاولة لاحقاَ.")
+        await message.reply("حدث خطأ غير متوقع، يرجى المحاولة لاحقاً.")
+
+@dp.message(F.photo)
+async def handle_photo(message: types.Message):
+    await message.reply(
+        "🖼️ لمعالجة الصور وإزالة الخلفيات بدقة عالية مجاناً، اضغط على زر شاشة الذكاء الاصطناعي أدناه 👇",
+        reply_markup=get_main_keyboard()
+    )
 
 async def main():
     await web_server()
     print("🚀 البوت وخادم الويب والواجهة يعملان الآن بنجاح...")
-    await dp.start_polling(bot)
+    
+    # حذف التحديثات الجلسات القديمة لمنع تعارض TelegramConflictError
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot, drop_pending_updates=True)
 
 if __name__ == "__main__":
     asyncio.run(main())
