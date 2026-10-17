@@ -2,6 +2,7 @@ import asyncio
 import os
 from io import BytesIO
 import aiohttp
+from aiohttp import web
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
@@ -14,6 +15,19 @@ WEBAPP_URL = "https://ga9trading9-web.github.io/Al-giloka/"
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
+
+# خادم ويب وهمي بسيط لإبقاء الخدمة المجانية على Render تعمل بدون توقف
+async def handle(request):
+    return web.Response(text="Bot is running successfully 24/7!")
+
+async def web_server():
+    app = web.Application()
+    app.router.add_get('/', handle)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 10000))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
 
 # زر فتح الـ WebApp وعرض الإعلانات المتدورة
 def get_main_keyboard():
@@ -73,7 +87,7 @@ async def handle_photo(message: types.Message):
         await bot.download_file(file_info.file_path, photo_io)
         
         input_bytes = photo_io.getvalue()
-        output_bytes = remove(input_bytes)  # معالجة محلية سريعة ومجانية
+        output_bytes = remove(input_bytes)
         
         result_file = types.BufferedInputFile(output_bytes, filename="no_bg.png")
         await message.answer_photo(
@@ -86,7 +100,9 @@ async def handle_photo(message: types.Message):
         await status_msg.edit_text("حدث خطأ أثناء معالجة الصورة، تأكد من جودتها وحجمها.")
 
 async def main():
-    print("🚀 البوت يعمل الآن بنجاح...")
+    # تشغيل خادم الويب الوهمي والبوت معاً في نفس الوقت
+    await web_server()
+    print("🚀 البوت وخادم الويب يعملان الآن بنجاح...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
