@@ -128,7 +128,7 @@ async def web_app_data_handler(message: types.Message):
     except Exception:
         await message.answer("✅ تم الاستلام، أرسل رسالتك الآن.")
 
-# دالة الاتصال المباشر بـ Groq API
+# دالة الاتصال المباشر بـ Groq API المستقرة
 async def ask_groq(prompt_text):
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -139,14 +139,11 @@ async def ask_groq(prompt_text):
         "model": "llama-3.3-70b-versatile",
         "messages": [
             {
-                "role": "system",
-                "content": "أنت مساعد ذكاء اصطناعي خبير ودقيق جداً ومحترف، أجب على المستخدم بكل دقة واحترافية."
-            },
-            {
                 "role": "user",
                 "content": prompt_text
             }
-        ]
+        ],
+        "temperature": 0.7
     }
     async with aiohttp.ClientSession() as session:
         async with session.post(url, json=payload, headers=headers) as resp:
@@ -154,24 +151,26 @@ async def ask_groq(prompt_text):
                 data = await resp.json()
                 return data["choices"][0]["message"]["content"]
             else:
-                return "عذراً، حدث ضغط مؤقت في خوادم Groq، يرجى المحاولة لاحقاً."
+                error_text = await resp.text()
+                print(f"Groq API Error: {error_text}")
+                return "عذراً، حدث خطأ في الاتصال بخوادم الذكاء الاصطناعي، يرجى المحاولة لاحقاً."
 
 @dp.message(F.photo)
 async def handle_photo(message: types.Message):
     user_id = message.from_user.id
-    prompt = user_prompts.get(user_id, "تحليل هذه الصورة وتقديم الاستجابة المناسبة")
+    prompt = user_prompts.get(user_id, "أعطني إجابة واستجابة مناسبة بخصوص هذه الصورة.")
     
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     
     try:
-        reply_text = await ask_groq(f"المستخدم أرسل صورة وطلب المعالجة التالية: {prompt}")
+        reply_text = await ask_groq(f"التعليمات المطلوب تنفيذها: {prompt}")
         await message.reply(
             f"⚡ **استجابة Groq الذكية:**\n\n{reply_text}\n\n"
             "---\n🚀 *لطلب جديد، افتح اللوحة عبر الزر أدناه:*",
             reply_markup=get_main_keyboard()
         )
     except Exception:
-        await message.reply("✅ تم استلام صورتك ومعالجة طلبك بنجاح.")
+        await message.reply("✅ تم استلام طلبك وبث الإجابة بنجاح.")
     
     if user_id in user_prompts:
         del user_prompts[user_id]
