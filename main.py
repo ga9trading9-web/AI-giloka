@@ -1,5 +1,6 @@
 import asyncio
 import os
+import urllib.parse
 import aiohttp
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F, types
@@ -13,10 +14,9 @@ RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 
-# ذاكرة مؤقتة لتخزين وصف المستخدم لحين إرسال الصورة
+# ذاكرة مؤقتة لتخزين تعليمات التعديل لكل مستخدم
 user_prompts = {}
 
-# صفحة HTML المتكاملة مع عرض الإعلانات وزر التحميل والوصف
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -36,7 +36,6 @@ HTML_CONTENT = """
         .btn { background: #0284c7; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
         .btn:hover { background: #0369a1; }
         #result { margin-top: 15px; font-size: 14px; color: #34d399; text-align: center; font-weight: bold; }
-        
     </style>
 </head>
 <body>
@@ -44,18 +43,17 @@ HTML_CONTENT = """
     <p>أهلاً بك في منصة معالجة الصور والتعديل الذكي.</p>
     
     <div class="card">
-        <label for="userPrompt">💬 اكتب التعليمات أو التوضيح المطلوب على الصورة:</label>
-        <textarea id="userPrompt" placeholder="مثال: اكتب اسمي بشكل نيون، أو أزل الخلفية..."></textarea>
+        <label for="userPrompt">💬 اكتب التعليمات المطلوب تطبيقها على الصورة:</label>
+        <textarea id="userPrompt" placeholder="مثال: امسح كل الكتابات في الصورة، أو اجعل اسمي بشكل نيون..."></textarea>
         
-        <button class="btn" onclick="savePromptToBot()">حفظ التعليمات والتوجه للبوت 🚀</button>
+        <button class="btn" onclick="savePromptToBot()">حفظ التعليمات وتوجه للبوت 🚀</button>
         <div id="result"></div>
     </div>
 
-    <!-- قسم الإعلانات (Adsterra / AdsGram) -->
+    <!-- قسم إعلانات Adsterra / AdsGram -->
     <div class="card" style="text-align: center;">
         <p style="margin: 0; color: #94a3b8; font-size: 12px;">إعلان مدعوم</p>
         <div style="margin-top: 10px; background: #334155; padding: 15px; border-radius: 8px; min-height: 60px;">
-            <!-- ضع كود إعلانات Adsterra هنا لكي يراه المستخدم أثناء تصفح الـ Mini App -->
             <span style="color: #94a3b8; font-size: 13px;">مساحة إعلانية لربح المشاهدات</span>
         </div>
     </div>
@@ -72,13 +70,14 @@ HTML_CONTENT = """
                 return;
             }
 
-            document.getElementById('result').style.color = "#38bdf8";
-            document.getElementById('result').innerText = "⏳ جاري حفظ التعليمات...";
+            document.getElementById('result').style.color = "#34d399";
+            document.getElementById('result').innerText = "✅ تم الحفظ! جاري توجيهك للمحادثة...";
             
-            // إرسال التعليمات للبوت عبر الـ WebApp Data
-            tg.sendData(JSON.stringify({
-                prompt: promptText
-            }));
+            // إرسال البيانات وإغلاق الصفحة تلقائياً
+            setTimeout(() => {
+                tg.sendData(JSON.stringify({ prompt: promptText }));
+                tg.close();
+            }, 800);
         }
     </script>
 </body>
@@ -111,79 +110,59 @@ def get_main_keyboard():
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
     text = (
-        f"أهلاً بك يا {message.from_user.first_name} في بوت الذكاء الاصطناعي والميزات المتقدمة! 🤖\n\n"
-        "1️⃣ اضغط على الزر أدناه لفتح لوحة التحكم وكتابة التعليمات ومراجعة الإعلانات.\n"
-        "2️⃣ بعد حفظ التعليمات، أرسل صورتك هنا في المحادثة ليتم تعديلها ومعالجتها فوراً!\n\n"
-        "اختر الخدمة من الزر أدناه 👇"
+        f"أهلاً بك يا {message.from_user.first_name} في بوت الذكاء الاصطناعي! 🤖\n\n"
+        "1️⃣ اضغط على الزر أدناه لكتابة تعليمات التعديل.\n"
+        "2️⃣ بعد الحفظ، أرسل صورتك هنا مباشرة وسأقوم بتعديلها لك فوراً!"
     )
     await message.answer(text, reply_markup=get_main_keyboard())
 
-# استقبال التعليمات المكتوبة من الـ Mini App
 @dp.message(F.web_app_data)
 async def web_app_data_handler(message: types.Message):
     try:
         import json
         data = json.loads(message.web_app_data.data)
         user_prompt = data.get("prompt", "")
-        
-        # حفظ الوصف الخاص بهذا المستخدم مؤقتاً
         user_prompts[message.from_user.id] = user_prompt
         
         await message.answer(
-            f"✅ **تم حفظ التعليمات بنجاح:**\n\"{user_prompt}\"\n\n"
-            "الآن أرسل صورتك مباشرة هنا في المحادثة وسيقوم الذكاء الاصطناعي بتطبيق التعديل عليها وإرسالها لك مع رابط التحميل والإعلانات! 🖼️👇"
+            f"✅ **تم حفظ تعليماتك بنجاح:**\n\"{user_prompt}\"\n\n"
+            "الآن أرسل الصورة التي تريد تعديلها مباشرة هنا في المحادثة 🖼️👇"
         )
     except Exception:
-        await message.answer("✅ تم استلام طلبك، يرجى إرسال الصورة الآن.")
+        await message.answer("✅ تم استلام التعليمات، أرسل صورتك الآن!")
 
-# استقبال الصورة ومعالجتها بناءً على الوصف المحفوظ
 @dp.message(F.photo)
 async def handle_photo(message: types.Message):
     user_id = message.from_user.id
-    prompt = user_prompts.get(user_id, "تعديل الصورة وتحسينها بالذكاء الاصطناعي")
+    prompt = user_prompts.get(user_id, "تعديل الصورة وتحسين جودتها")
     
-    await message.answer(f"⏳ جاري معالجة الصورة بناءً على طلبك: ({prompt})... يرجى الانتظار قليلاً 🤖")
+    status_msg = await message.answer(f"⏳ جاري تعديل الصورة بالذكاء الاصطناعي بحسب طلبك:\n\"{prompt}\" ...")
     
-    # هنا يتم سحب الصورة ومعالجتها عبر الذكاء الاصطناعي
-    # كمثال توضيحي نقوم بإعادة إرسال الصورة ومعها خيارات التحميل والعودة للـ Mini App للإعلانات
-    await message.reply_photo(
-        photo=message.photo[-1].file_id,
-        caption=f"✨ **تمت معالجة صورتك بنجاح!**\n📝 التعليمات المطبقة: {prompt}",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📥 تحميل الصورة والاطلاع على المزيد", web_app=WebAppInfo(url=f"{RENDER_WEBAPP_URL}/"))]
-        ])
-    )
-    
-    # تنظيف الذاكرة المؤقتة بعد الانتهاء
-    if user_id in user_prompts:
-        del user_prompts[user_id]
-
-@dp.message(F.text)
-async def handle_text(message: types.Message):
-    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     try:
-        headers = {"Authorization": f"Bearer {POLLINATIONS_API_KEY}"}
-        payload = {
-            "messages": [{"role": "user", "content": message.text}],
-            "model": "openai"
-        }
-        async with aiohttp.ClientSession() as session:
-            async with session.post("https://text.pollinations.ai/", json=payload, headers=headers) as resp:
-                if resp.status == 200:
-                    reply_text = await resp.text()
-                else:
-                    reply_text = "عذراً، حدث ضغط مؤقت على الخادم، يرجى المحاولة مرة أخرى."
-        await message.reply(
-            f"{reply_text}\n\n---\n🚀 *المزيد من الأدوات عبر الزر أدناه:*", 
-            parse_mode="Markdown",
-            reply_markup=get_main_keyboard()
+        # 1. الحصول على رابط الصورة المرفوعة من تيليجرام
+        file_id = message.photo[-1].file_id
+        file_info = await bot.get_file(file_id)
+        image_url = f"https://api.telegram.org/file/bot{TELEGRAM_BOT_TOKEN}/{file_info.file_path}"
+        
+        # 2. توليد صورة جديدة معدلة باستخدام Pollinations AI Image API
+        encoded_prompt = urllib.parse.quote(f"{prompt}, high quality, detailed, based on {image_url}")
+        edited_image_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true"
+        
+        # 3. إرسال الصورة الناتجة للمستخدم
+        await message.reply_photo(
+            photo=edited_image_url,
+            caption=f"✨ **تمت معالجة الصورة بنجاح!**\n📝 **التعليمات المطبقة:** {prompt}",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="📥 فتح الـ Mini App لمشاهدة الإعلانات ودعم البوت", web_app=WebAppInfo(url=f"{RENDER_WEBAPP_URL}/"))]
+            ])
         )
+        await status_msg.delete()
     except Exception:
-        await message.reply("حدث خطأ غير متوقع، يرجى المحاولة لاحقاً.")
+        await status_msg.edit_text("❌ حدث خطأ أثناء معالجة الصورة، يرجى المحاولة مرة أخرى.")
 
 async def main():
     await web_server()
-    print("🚀 البوت وخادم الويب والواجهة يعملان الآن بنجاح...")
+    print("🚀 البوت والواجهة يعملان الآن بنجاح...")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, drop_pending_updates=True)
 
