@@ -1,109 +1,318 @@
-import asyncio
-import os
-from io import BytesIO
-import aiohttp
-from aiohttp import web
-from aiogram import Bot, Dispatcher, F, types
-from aiogram.filters import CommandStart
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
-from rembg import remove
+<!DOCTYPE html>
 
-# =================== البيانات الأساسية الخاصة بك ===================
-TELEGRAM_BOT_TOKEN = "8863269193:AAFC8GH3QlMIaypS7xZLoSHb0bhoyfGKuuc"
-POLLINATIONS_API_KEY = "sk_1uA0RH6GnFEZOHl3Tgw1mpHlSGvcBt7W"
-WEBAPP_URL = "https://ga9trading9-web.github.io/Al-giloka/"
+<html lang="en" style="height: 100%">
+    <head>
+        
+            <!-- Google tag (gtag.js) -->
+            <script async src="https://www.googletagmanager.com/gtag/js?id=G-DHJF51F24N"></script>
+            <script>
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
 
-bot = Bot(token=TELEGRAM_BOT_TOKEN)
-dp = Dispatcher()
+              gtag('config', 'G-DHJF51F24N');
+            </script>
+        
 
-# خادم ويب وهمي بسيط لإبقاء الخدمة المجانية على Render تعمل بدون توقف
-async def handle(request):
-    return web.Response(text="Bot is running successfully 24/7!")
+        <meta http-equiv="Content-Security-Policy" content="
+          default-src 'self' 'unsafe-inline' data: *.google-analytics.com fonts.googleapis.com *.google.com pyflakes27.pythonanywhere.com pyflakes34.pythonanywhere.com pyflakes35.pythonanywhere.com pyflakes36.pythonanywhere.com pyflakes37.pythonanywhere.com pyflakes38.pythonanywhere.com pyflakes39.pythonanywhere.com pyflakes310.pythonanywhere.com pyflakes311.pythonanywhere.com pyflakes312.pythonanywhere.com pyflakes313.pythonanywhere.com;
+          font-src 'self' fonts.gstatic.com *.googleapis.com;
+          frame-src 'self' *.js.stripe.com js.stripe.com hooks.stripe.com;
+          script-src 'self' 'unsafe-inline' 'unsafe-eval' *.js.stripe.com js.stripe.com *.google.com *.googleapis.com api.github.com;
+          img-src 'self' data:;
+        ">
+        <meta charset="utf-8">
+        <title>Login: PythonAnywhere</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="Login: PythonAnywhere">
+        <meta name="author" content="PythonAnywhere LLP">
+        <meta name="google-site-verification" content="O4UxDrfcHjC44jybs2vajc1GgRkTKCTRgVzeV6I9V14" />
 
-async def web_server():
-    app = web.Application()
-    app.router.add_get('/', handle)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    port = int(os.environ.get("PORT", 10000))
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
 
-# زر فتح الـ WebApp وعرض الإعلانات المتدورة
-def get_main_keyboard():
-    return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text="✨ فتح شاشة الذكاء الاصطناعي والإعلانات", 
-            web_app=WebAppInfo(url=WEBAPP_URL)
-        )]
-    ])
+        <!-- Le styles -->
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i" />
 
-# 1. أمر البداية /start
-@dp.message(CommandStart())
-async def start_handler(message: types.Message):
-    text = (
-        f"أهلاً بك يا {message.from_user.first_name} في بوت الذكاء الاصطناعي والميزات المتقدمة! 🤖\n\n"
-        "💬 **الدردشة:** أرسل لي أي سؤال وسأجيبك فوراً.\n"
-        "🖼️ **الصور:** أرسل لي أي صورة وسأزيل خلفيتها مجاناً وبدقة عالية.\n\n"
-        "اضغط على الزر أدناه لفتح لوحة الخدمات والمكافآت 👇"
-    )
-    await message.answer(text, reply_markup=get_main_keyboard())
+        <link rel="stylesheet" href="/static/CACHE/css/output.fc9611b031b5.css" type="text/css" media="screen">
+        <link rel="stylesheet" href="/static/CACHE/css/output.b9a4961a16f7.css" type="text/css"><link rel="stylesheet" href="/static/CACHE/css/output.f5a02b1eb0f3.css" type="text/css" media="screen">
 
-# 2. معالجة النصوص والأسئلة عبر Pollinations AI
-@dp.message(F.text)
-async def handle_text(message: types.Message):
-    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+        <!-- Le javascript -->
+        <script type="text/javascript">
+            var Anywhere = {};
+            Anywhere.urls = {};
+            Anywhere.csrfToken = "BrrqeNLgVOcE4FPrqGNoojYGSr8PCOrqtjfwDSE4CLiAhOUSbFXFGxrCxo0IitNU";
+        </script>
+        <script src="/static/CACHE/js/output.33398915ce6a.js"></script>
+        
+
+        <script src="/static/CACHE/js/output.a0cffd228d2e.js"></script>
+        
+        
+
+    </head>
+
+    <body style="height:100%;">
+       <div style="min-height: 100%; position: relative;">
+        
+  
+    <nav class="navbar alert alert-warning alert-dismissible cookie-warning" style="padding: 10px 35px 5px 35px; min-height: auto;" id="id_cookie_warning_marker_for_response_middleware">
+      <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+      <p>
+        <small>
+          We use cookies to provide social media features and to analyse our traffic. We also share information about your use of our site with our social media and analytics partners. <a href="/privacy/#cookies">Details here</a>.
+        </small>
+      </p>
+    </nav>
+  
+
+        
+  <nav class="navbar top-nav hidden-xs">
+    <div class="container">
+      <ul class="nav navbar-nav navbar-right">
+        
+<li class="">
+        <a href="" data-testid="contact_support_link" target="_parent" class="feedback_link">
+                
+                Send Feedback
+                
+        </a>
+</li>
+
+
+<li class=""><a href="/forums/" target="_parent" class="forums_link">Forums</a></li>
+<li class=""><a href="https://help.pythonanywhere.com/" target="_parent" class="help_link">Help</a>
+</li>
+<li class=""><a href="https://blog.pythonanywhere.com/" target="_parent" class="blog_link">Blog</a>
+</li>
+
+<li class=""><a style="font-weight: bold;" href="/pricing/" target="_parent"
+                class="pricing_link">Pricing & signup</a></li>
+<li class=""><a href="/login/?next=/login/" class="login_link"
+                target="_parent">Log in</a></li>
+
+      </ul>
+    </div>
+  </nav>
+
+  
+
+
+
+
+  <nav class="navbar primary-navbar">
+    <div class="container">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#main_nav" aria-expanded="false">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="/">
+          <img id='id_logo' src="/static/anywhere/images/PA-logo.svg" width="225">
+        </a>
+      </div>
+
+      <div class="collapse navbar-collapse" id="main_nav">
+        <ul class="nav navbar-nav navbar-right">
+          
+            
+
+          
+          
+<li class="visible-xs">
+        <a href="" data-testid="contact_support_link" target="_parent" class="feedback_link">
+                
+                Send Feedback
+                
+        </a>
+</li>
+
+
+<li class="visible-xs"><a href="/forums/" target="_parent" class="forums_link">Forums</a></li>
+<li class="visible-xs"><a href="https://help.pythonanywhere.com/" target="_parent" class="help_link">Help</a>
+</li>
+<li class="visible-xs"><a href="https://blog.pythonanywhere.com/" target="_parent" class="blog_link">Blog</a>
+</li>
+
+<li class="visible-xs"><a style="font-weight: bold;" href="/pricing/" target="_parent"
+                class="pricing_link">Pricing & signup</a></li>
+<li class="visible-xs"><a href="/login/?next=/login/" class="login_link"
+                target="_parent">Log in</a></li>
+
+        </ul>
+      </div>
+
+    </div>
+  </nav>
+
+  <div class="container">
     
-    try:
-        headers = {"Authorization": f"Bearer {POLLINATIONS_API_KEY}"}
-        payload = {
-            "messages": [{"role": "user", "content": message.text}],
-            "model": "openai"
-        }
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.post("https://text.pollinations.ai/", json=payload, headers=headers) as resp:
-                if resp.status == 200:
-                    reply_text = await resp.text()
-                else:
-                    reply_text = "عذراً، حدث ضغط مؤقت على الخادم، يرجى المحاولة مرة أخرى."
 
-        await message.reply(
-            f"{reply_text}\n\n--- \n🚀 *المزيد من الأدوات عبر الزر أدناه:*", 
-            parse_mode="Markdown",
-            reply_markup=get_main_keyboard()
-        )
-    except Exception as e:
-        await message.reply("حدث خطأ غير متوقع، يرجى المحاولة لاحقاً.")
+  </div>
 
-# 3. إزالة الخلفيات من الصور مجاناً
-@dp.message(F.photo)
-async def handle_photo(message: types.Message):
-    status_msg = await message.reply("⏳ جاري معالجة الصورة وإزالة الخلفية بالذكاء الاصطناعي...")
+  
+
     
-    try:
-        photo_io = BytesIO()
-        file_info = await bot.get_file(message.photo[-1].file_id)
-        await bot.download_file(file_info.file_path, photo_io)
-        
-        input_bytes = photo_io.getvalue()
-        output_bytes = remove(input_bytes)
-        
-        result_file = types.BufferedInputFile(output_bytes, filename="no_bg.png")
-        await message.answer_photo(
-            photo=result_file, 
-            caption="✅ تم إزالة الخلفية بنجاح!",
-            reply_markup=get_main_keyboard()
-        )
-        await status_msg.delete()
-    except Exception as e:
-        await status_msg.edit_text("حدث خطأ أثناء معالجة الصورة، تأكد من جودتها وحجمها.")
+  
 
-async def main():
-    # تشغيل خادم الويب الوهمي والبوت معاً في نفس الوقت
-    await web_server()
-    print("🚀 البوت وخادم الويب يعملان الآن بنجاح...")
-    await dp.start_polling(bot)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+        
+  
+
+
+        
+    
+  <div class="container">
+    <div class="row">
+      <div class="col-md-5 offset-md-3">
+        
+  <h1>Log in</h1>
+
+  
+
+  <form class="form" action="" method="post"><input type="hidden" name="csrfmiddlewaretoken" value="BrrqeNLgVOcE4FPrqGNoojYGSr8PCOrqtjfwDSE4CLiAhOUSbFXFGxrCxo0IitNU">
+    <table>
+  <style type="text/css" scoped>
+    /* hide stupid updowney arrows on number input */
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+    .d-none {
+      display: none;
+    }
+  </style>
+  <input type="hidden" name="login_view-current_step" value="auth" id="id_login_view-current_step">
+  
+
+<p class="form-group">
+  <input type="text" name="auth-username" placeholder="Username or email address" tabindex="1" autocorrect="off" autocapitalize="off" class="form-control" maxlength="150" required id="id_auth-username">
+  <span class="help-block">
+    No account? <a href="/pricing/" id="id_signup_link">Sign up here!</a>
+  </span>
+</p>
+<p class="form-group">
+  <input type="password" name="auth-password" placeholder="Password" tabindex="2" class="form-control" required id="id_auth-password">
+  <span class="help-block">
+    <a href="/password_reset/">Forgotten password?</a>
+  </span>
+</p>
+<div class="clear"></div>
+
+</table>
+
+
+    
+    <div style="margin-left: -9999px"><input type="submit" value=""/></div>
+
+    
+
+    
+    <button id="id_next" type="submit" class="btn btn-primary">Log in</button>
+
+    
+
+  </form>
+
+      </div>
+    </div>
+  </div>
+
+
+
+        
+  <div class="footer-spacer"></div>
+  <footer id="id_copyright_div" class="footer">
+    <p>
+      Copyright &copy; 2011-2026 <a href="/about/company_details/">PythonAnywhere LLP</a>
+      &mdash;
+      <a href="/terms/">Terms</a>
+      &mdash;
+      <a href="/privacy/">Privacy & Cookies</a><br/>
+      </p>
+  </footer>
+
+      </div>
+
+        
+
+
+        
+
+<div id="id_feedback_dialog" title="Send Feedback"
+    style="display:none">
+    <div id="id_feedback_dialog_blurb_big" class="dialog_blurb_big">
+        
+        Thank you for your feedback.
+        
+    </div>
+    <div id="id_feedback_dialog_blurb_small">
+        <!-- CTA disclaimer section -->
+        
+        <div id="id_cta_disclaimer" class="cta_disclaimer">
+            <div id="id_disclaimer_text">
+                We review all feedback, but we cannot promise a response.
+                <br />
+                <br />
+                Did you know you can upgrade your plan to get access to Customer Support?
+            </div>
+            <div class="dialog_buttons center">
+                <button class="btn btn-primary" id="id_feedback_dialog_upgrade_button"
+                    onclick='window.top.location="/pricing/";'>
+                    
+                    Register Now
+                    
+                </button>
+            </div>
+        </div>
+        
+
+        To help us assist you as efficiently as possible, please include:
+        <ol>
+            <li>What you were trying to do.</li>
+            <li>What you expected to happen.</li>
+            <li>What actually happened including any error messages or screenshots.</li>
+            <li>Steps to reproduce the issue.</li>
+        </ol>
+    </div>
+
+    <textarea id="id_feedback_dialog_text" rows="6"></textarea>
+    <input id="id_feedback_dialog_email_address" type="text"
+        placeholder="Email address (optional - only necessary if you would like us to contact you)" />
+
+    <div id="id_feedback_dialog_error" style="display: none">
+        Sorry, there was a problem connecting to the server. Please try again in a few moments.
+    </div>
+    <div id="id_feedback_dialog_rate_limit_error" style="display: none">
+        
+        Sorry, you have reached the sending limit for feedback. Please try again in a few moments.
+        
+    </div>
+    <div id="id_feedback_dialog_success" style="display: none">
+        
+        Thank you for your feedback. We review all feedback, but we cannot promise a response.
+        
+    </div>
+
+    <div class="dialog_buttons">
+        <img id="id_feedback_dialog_spinner" src="/static/anywhere/images/spinner-small.gif" />
+        <button class="btn btn-primary" id="id_feedback_dialog_ok_button">OK</button>
+        <button class="btn btn-default" id="id_feedback_dialog_cancel_button">Cancel</button>
+    </div>
+
+    <div id="id_feedback_dialog_only_close_button" style="display: none">
+        <button class="btn btn-primary" id="id_feedback_dialog_close_button">Close</button>
+    </div>
+</div>
+
+        
+        <!-- preload font awesome fonts to avoid glitch when switching icons -->
+        <div style="width: 0; height: 0; overflow: hidden"><i class="fa fa-square-o fa-3x" ></i></div>
+    </body>
+</html>
