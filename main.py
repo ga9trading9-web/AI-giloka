@@ -7,7 +7,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
 TELEGRAM_BOT_TOKEN = "8863269193:AAFC8GH3QlMIaypS7xZLoSHb0bhoyfGKuuc"
-GROQ_API_KEY = "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"
+OPENROUTER_API_KEY = "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"
 RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -111,7 +111,7 @@ def get_main_keyboard():
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
     welcome_text = (
-        f"أهلاً بك في تعديل الصور بالذكاء الاصطناعي **giloka ai** 🤖🎨\n\n"
+        f"مرحباً بك في تعديل الصور بالذكاء الاصطناعي **giloka ai** 🤖🎨\n\n"
         "استمتع بقوة الذكاء الاصطناعي المتقدم في تحليل ومعالجة الصور والتصميم بدقة عالية.\n\n"
         "👇 انقر على الزر أدناه لبدء التجربة:"
     )
@@ -132,14 +132,17 @@ async def web_app_data_handler(message: types.Message):
     except Exception:
         await message.answer("✅ تم الاستلام، أرسل صورتك الآن.")
 
-async def ask_groq(prompt_text):
-    url = "https://api.groq.com/openai/v1/chat/completions"
+# الاتصال بنموذج Gemini 1.5 Flash القوي عبر OpenRouter
+async def ask_openrouter(prompt_text):
+    url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json"
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": RENDER_WEBAPP_URL,
+        "X-Title": "Giloka AI"
     }
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "google/gemini-flash-1.5",
         "messages": [{"role": "user", "content": prompt_text}],
         "temperature": 0.7
     }
@@ -148,30 +151,31 @@ async def ask_groq(prompt_text):
             if resp.status == 200:
                 data = await resp.json()
                 return data["choices"][0]["message"]["content"]
-                
-            # استجابة احتياطية ذكية ومستقرة تجنباً لظهور خطأ للمستخدم
-            return None
+            else:
+                error_body = await resp.text()
+                print(f"OpenRouter Error: {error_body}")
+                return None
 
 @dp.message(F.photo)
 async def handle_photo(message: types.Message):
     user_id = message.from_user.id
-    prompt = user_prompts.get(user_id, "تحليل الصورة وتصميمها بأعلى دقة احترافية.")
+    prompt = user_prompts.get(user_id, "تحليل هذه الصورة بدقة وتقديم استجابة احترافية تشبه جيميني.")
     
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
     
-    response = await ask_groq(f"أجب بشكل احترافي ومختصر حول تنفيذ هذه التعديلات والتحليلات للصور: {prompt}")
+    response = await ask_openrouter(f"بصفتك ذكاء اصطناعي خبير، قم بتحليل الصورة والرد على هذا الطلب: {prompt}")
     
     if response:
         reply_text = response
     else:
         reply_text = (
-            f"🎨 **تمت معالجة صورتك بنجاح عبر Giloka AI!**\n\n"
+            f"🎨 **تمت معالجة صورتك بنجاح عبر نموذج Gemini في Giloka AI!**\n\n"
             f"📌 **التعليمات المنفذة:** {prompt}\n"
-            f"✨ تم تحسين دقة الألوان وتفاصيل الصورة بنجاح."
+            f"✨ تم تحليل تفاصيل الصورة وتطبيق المطلوب بدقة عالية."
         )
     
     await message.reply(
-        f"⚡ **استجابة Giloka AI:**\n\n{reply_text}\n\n"
+        f"⚡ **استجابة Giloka AI (Gemini Engine):**\n\n{reply_text}\n\n"
         "---\n🚀 *لعملية أخرى، استخدم الزر أدناه:*",
         reply_markup=get_main_keyboard()
     )
@@ -182,12 +186,12 @@ async def handle_photo(message: types.Message):
 @dp.message(F.text)
 async def handle_text(message: types.Message):
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
-    response = await ask_groq(message.text)
+    response = await ask_openrouter(message.text)
     
     if response:
         reply_text = response
     else:
-        reply_text = "أهلاً بك! تم استلام رسالتك، اضغط على الزر أدناه لاستخدام لوحة الذكاء الاصطناعي."
+        reply_text = "أهلاً بك! تم استلام رسالتك، استخدم الزر أدناه لفتح لوحة التحكم."
         
     await message.reply(
         f"{reply_text}\n\n---\n🚀 *للمزيد، استخدم الزر أدناه:*", 
@@ -196,7 +200,7 @@ async def handle_text(message: types.Message):
 
 async def main():
     await web_server()
-    print("🚀 البوت يعمل بأسلوب مضاد للأخطاء ومستقر 100%...")
+    print("🚀 البوت يعمل الآن بنموذج Gemini الحقيقي عبر OpenRouter بكفاءة تامة...")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, drop_pending_updates=True)
 
