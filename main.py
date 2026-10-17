@@ -13,7 +13,7 @@ RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 
-# محتوى صفحة الـ WebApp المدمجة لتجنب أخطاء 404
+# صفحة HTML مدمجة لتجنب أخطاء 404 نهائياً
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -105,18 +105,11 @@ async def handle_text(message: types.Message):
     except Exception:
         await message.reply("حدث خطأ غير متوقع، يرجى المحاولة لاحقاً.")
 
-@dp.message(F.photo)
-async def handle_photo(message: types.Message):
-    await message.reply(
-        "🖼️ لمعالجة الصور وإزالة الخلفيات بدقة عالية مجاناً، اضغط على زر شاشة الذكاء الاصطناعي أدناه 👇",
-        reply_markup=get_main_keyboard()
-    )
-
 async def main():
     await web_server()
     print("🚀 البوت وخادم الويب والواجهة يعملان الآن بنجاح...")
     
-    # حذف التحديثات الجلسات القديمة لمنع تعارض TelegramConflictError
+    # تنظيف الوب هوك والبدء النظيف
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, drop_pending_updates=True)
 
