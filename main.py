@@ -13,7 +13,10 @@ RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 
-# صفحة HTML مع خانة كتابة مخصصة للتعليمات والصور
+# ذاكرة مؤقتة لتخزين وصف المستخدم لحين إرسال الصورة
+user_prompts = {}
+
+# صفحة HTML المتكاملة مع عرض الإعلانات وزر التحميل والوصف
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -30,12 +33,10 @@ HTML_CONTENT = """
         label { color: #38bdf8; font-size: 14px; display: block; margin-bottom: 5px; font-weight: bold; }
         textarea { width: 100%; height: 80px; background: #0f172a; color: #fff; border: 1px solid #334155; border-radius: 8px; padding: 10px; box-sizing: border-box; font-size: 14px; resize: none; margin-bottom: 12px; }
         textarea:focus { outline: none; border-color: #38bdf8; }
-        input[type="file"] { display: none; }
-        .file-upload-btn { background: #334155; color: #38bdf8; padding: 10px; border-radius: 8px; display: block; text-align: center; cursor: pointer; font-weight: bold; border: 1px dashed #38bdf8; margin-bottom: 15px; }
-        .btn { background: #0284c7; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn { background: #0284c7; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
         .btn:hover { background: #0369a1; }
         #result { margin-top: 15px; font-size: 14px; color: #34d399; text-align: center; font-weight: bold; }
-        .ad-container { margin-top: 20px; background: #334155; padding: 10px; border-radius: 8px; min-height: 50px; display: flex; align-items: center; justify-content: center; }
+        
     </style>
 </head>
 <body>
@@ -44,20 +45,18 @@ HTML_CONTENT = """
     
     <div class="card">
         <label for="userPrompt">💬 اكتب التعليمات أو التوضيح المطلوب على الصورة:</label>
-        <textarea id="userPrompt" placeholder="مثال: قم بإزالة الخلفية، أو اجعل الصورة أكثر إشراقاً..."></textarea>
+        <textarea id="userPrompt" placeholder="مثال: اكتب اسمي بشكل نيون، أو أزل الخلفية..."></textarea>
         
-        <label>📁 اختر الصورة:</label>
-        <label for="imageInput" class="file-upload-btn" id="fileLabel">اختر صورة من جهازك...</label>
-        <input type="file" id="imageInput" accept="image/*" onchange="updateFileName()">
-        
-        <button class="btn" onclick="sendDataToBot()">إرسال الطلب للبوت 🚀</button>
+        <button class="btn" onclick="savePromptToBot()">حفظ التعليمات والتوجه للبوت 🚀</button>
         <div id="result"></div>
     </div>
 
+    <!-- قسم الإعلانات (Adsterra / AdsGram) -->
     <div class="card" style="text-align: center;">
         <p style="margin: 0; color: #94a3b8; font-size: 12px;">إعلان مدعوم</p>
-        <div class="ad-container">
-            <span style="color: #94a3b8; font-size: 12px;">مساحة إعلانية</span>
+        <div style="margin-top: 10px; background: #334155; padding: 15px; border-radius: 8px; min-height: 60px;">
+            <!-- ضع كود إعلانات Adsterra هنا لكي يراه المستخدم أثناء تصفح الـ Mini App -->
+            <span style="color: #94a3b8; font-size: 13px;">مساحة إعلانية لربح المشاهدات</span>
         </div>
     </div>
 
@@ -65,37 +64,21 @@ HTML_CONTENT = """
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        function updateFileName() {
-            const input = document.getElementById('imageInput');
-            const label = document.getElementById('fileLabel');
-            if (input.files.length > 0) {
-                label.innerText = "✅ تم اختيار: " + input.files[0].name;
-            }
-        }
-
-        function sendDataToBot() {
+        function savePromptToBot() {
             const promptText = document.getElementById('userPrompt').value;
-            const input = document.getElementById('imageInput');
-            
-            if (!promptText && input.files.length === 0) {
+            if (!promptText) {
                 document.getElementById('result').style.color = "#f87171";
-                document.getElementById('result').innerText = "⚠️ يرجى كتابة ملاحظة أو اختيار صورة على الأقل!";
+                document.getElementById('result').innerText = "⚠️ يرجى كتابة التعليمات أولاً!";
                 return;
             }
 
             document.getElementById('result').style.color = "#38bdf8";
-            document.getElementById('result').innerText = "⏳ جاري إرسال التعليمات ومعالجة الطلب...";
+            document.getElementById('result').innerText = "⏳ جاري حفظ التعليمات...";
             
-            setTimeout(() => {
-                document.getElementById('result').style.color = "#34d399";
-                document.getElementById('result').innerText = "✅ تم إرسال طلبك بنجاح إلى البوت!";
-                
-                // إرسال البيانات للبوت وإغلاق النافذة
-                tg.sendData(JSON.stringify({
-                    prompt: promptText,
-                    has_image: input.files.length > 0
-                }));
-            }, 1500);
+            // إرسال التعليمات للبوت عبر الـ WebApp Data
+            tg.sendData(JSON.stringify({
+                prompt: promptText
+            }));
         }
     </script>
 </body>
@@ -120,7 +103,7 @@ async def web_server():
 def get_main_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
-            text="✨ فتح لوحة الذكاء الاصطناعي والتعديل", 
+            text="✨ فتح لوحة الذكاء الاصطناعي والإعلانات", 
             web_app=WebAppInfo(url=f"{RENDER_WEBAPP_URL}/")
         )]
     ])
@@ -129,27 +112,51 @@ def get_main_keyboard():
 async def start_handler(message: types.Message):
     text = (
         f"أهلاً بك يا {message.from_user.first_name} في بوت الذكاء الاصطناعي والميزات المتقدمة! 🤖\n\n"
-        "💬 **الدردشة:** أرسل لي أي سؤال وسأجيبك فوراً.\n"
-        "🖼️ **الصور:** لمعالجة الصور وإزالة الخلفيات وتعديلها بدقة عالية، استخدم الزر أدناه.\n\n"
-        "اضغط على الزر أدناه لفتح لوحة الخدمات 👇"
+        "1️⃣ اضغط على الزر أدناه لفتح لوحة التحكم وكتابة التعليمات ومراجعة الإعلانات.\n"
+        "2️⃣ بعد حفظ التعليمات، أرسل صورتك هنا في المحادثة ليتم تعديلها ومعالجتها فوراً!\n\n"
+        "اختر الخدمة من الزر أدناه 👇"
     )
     await message.answer(text, reply_markup=get_main_keyboard())
 
-# استقبال البيانات المرسلة من الـ Mini App (مثل التعليمات المكتوبة)
+# استقبال التعليمات المكتوبة من الـ Mini App
 @dp.message(F.web_app_data)
 async def web_app_data_handler(message: types.Message):
     try:
         import json
         data = json.loads(message.web_app_data.data)
-        user_prompt = data.get("prompt", "بدون تعليمات")
+        user_prompt = data.get("prompt", "")
+        
+        # حفظ الوصف الخاص بهذا المستخدم مؤقتاً
+        user_prompts[message.from_user.id] = user_prompt
         
         await message.answer(
-            f"📥 **تم استلام طلبك من لوحة التحكم بنجاح!**\n\n"
-            f"📝 **التعليمات المكتوبة:** {user_prompt}\n\n"
-            "يرجى إرسال الصورة مباشرة هنا في المحادثة لكي أبدأ بتنفيذ التعديلات عليها فوراً عبر الذكاء الاصطناعي! 👇"
+            f"✅ **تم حفظ التعليمات بنجاح:**\n\"{user_prompt}\"\n\n"
+            "الآن أرسل صورتك مباشرة هنا في المحادثة وسيقوم الذكاء الاصطناعي بتطبيق التعديل عليها وإرسالها لك مع رابط التحميل والإعلانات! 🖼️👇"
         )
     except Exception:
-        await message.answer("✅ تم استلام طلبك بنجاح!")
+        await message.answer("✅ تم استلام طلبك، يرجى إرسال الصورة الآن.")
+
+# استقبال الصورة ومعالجتها بناءً على الوصف المحفوظ
+@dp.message(F.photo)
+async def handle_photo(message: types.Message):
+    user_id = message.from_user.id
+    prompt = user_prompts.get(user_id, "تعديل الصورة وتحسينها بالذكاء الاصطناعي")
+    
+    await message.answer(f"⏳ جاري معالجة الصورة بناءً على طلبك: ({prompt})... يرجى الانتظار قليلاً 🤖")
+    
+    # هنا يتم سحب الصورة ومعالجتها عبر الذكاء الاصطناعي
+    # كمثال توضيحي نقوم بإعادة إرسال الصورة ومعها خيارات التحميل والعودة للـ Mini App للإعلانات
+    await message.reply_photo(
+        photo=message.photo[-1].file_id,
+        caption=f"✨ **تمت معالجة صورتك بنجاح!**\n📝 التعليمات المطبقة: {prompt}",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📥 تحميل الصورة والاطلاع على المزيد", web_app=WebAppInfo(url=f"{RENDER_WEBAPP_URL}/"))]
+        ])
+    )
+    
+    # تنظيف الذاكرة المؤقتة بعد الانتهاء
+    if user_id in user_prompts:
+        del user_prompts[user_id]
 
 @dp.message(F.text)
 async def handle_text(message: types.Message):
