@@ -13,7 +13,7 @@ RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 
-# صفحة HTML الاحترافية مع دعم رفع الصور والإعلانات
+# صفحة HTML مع خانة كتابة مخصصة للتعليمات والصور
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -24,37 +24,39 @@ HTML_CONTENT = """
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { font-family: Tahoma, sans-serif; background: #0f172a; color: #fff; text-align: center; padding: 15px; margin: 0; }
-        .card { background: #1e293b; padding: 15px; border-radius: 12px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        h2 { color: #38bdf8; font-size: 20px; }
-        p { color: #94a3b8; font-size: 14px; }
-        .btn { background: #0284c7; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 10px; width: 100%; font-weight: bold; }
-        .btn:hover { background: #0369a1; }
+        .card { background: #1e293b; padding: 15px; border-radius: 12px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-align: right; }
+        h2 { color: #38bdf8; font-size: 20px; text-align: center; }
+        p { color: #94a3b8; font-size: 14px; text-align: center; }
+        label { color: #38bdf8; font-size: 14px; display: block; margin-bottom: 5px; font-weight: bold; }
+        textarea { width: 100%; height: 80px; background: #0f172a; color: #fff; border: 1px solid #334155; border-radius: 8px; padding: 10px; box-sizing: border-box; font-size: 14px; resize: none; margin-bottom: 12px; }
+        textarea:focus { outline: none; border-color: #38bdf8; }
         input[type="file"] { display: none; }
-        .file-upload-btn { background: #10b981; color: white; padding: 12px 20px; border-radius: 8px; display: inline-block; cursor: pointer; width: 100%; box-sizing: border-box; font-weight: bold; margin-top: 10px; }
-        #result { margin-top: 15px; font-size: 14px; color: #38bdf8; }
-        /* حاوية الإعلانات */
+        .file-upload-btn { background: #334155; color: #38bdf8; padding: 10px; border-radius: 8px; display: block; text-align: center; cursor: pointer; font-weight: bold; border: 1px dashed #38bdf8; margin-bottom: 15px; }
+        .btn { background: #0284c7; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn:hover { background: #0369a1; }
+        #result { margin-top: 15px; font-size: 14px; color: #34d399; text-align: center; font-weight: bold; }
         .ad-container { margin-top: 20px; background: #334155; padding: 10px; border-radius: 8px; min-height: 50px; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
     <h2>🎨 لوحة خدمات Giloka AI</h2>
-    <p>أهلاً بك في منصة معالجة الصور الذكية وإزالة الخلفيات.</p>
+    <p>أهلاً بك في منصة معالجة الصور والتعديل الذكي.</p>
     
     <div class="card">
-        <h3>معالجة الصور بالذكاء الاصطناعي</h3>
-        <p>اختر صورة من هاتفك ليتم رفعها ومعالجتها فوراً.</p>
+        <label for="userPrompt">💬 اكتب التعليمات أو التوضيح المطلوب على الصورة:</label>
+        <textarea id="userPrompt" placeholder="مثال: قم بإزالة الخلفية، أو اجعل الصورة أكثر إشراقاً..."></textarea>
         
-        <label for="imageInput" class="file-upload-btn">📁 اختر الصورة من الجهاز</label>
-        <input type="file" id="imageInput" accept="image/*" onchange="processImage(event)">
+        <label>📁 اختر الصورة:</label>
+        <label for="imageInput" class="file-upload-btn" id="fileLabel">اختر صورة من جهازك...</label>
+        <input type="file" id="imageInput" accept="image/*" onchange="updateFileName()">
         
+        <button class="btn" onclick="sendDataToBot()">إرسال الطلب للبوت 🚀</button>
         <div id="result"></div>
     </div>
 
-    <!-- قسم الإعلانات (يمكنك وضع كود إعلانات Adsterra أو AdsGram هنا) -->
-    <div class="card">
-        <p>إعلان مدعوم</p>
-        <div class="ad-container" id="ad-slot">
-            <!-- ضع كود بانر الإعلانات هنا إذا توفر لديك -->
+    <div class="card" style="text-align: center;">
+        <p style="margin: 0; color: #94a3b8; font-size: 12px;">إعلان مدعوم</p>
+        <div class="ad-container">
             <span style="color: #94a3b8; font-size: 12px;">مساحة إعلانية</span>
         </div>
     </div>
@@ -63,16 +65,37 @@ HTML_CONTENT = """
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        function processImage(event) {
-            const file = event.target.files[0];
-            if (file) {
-                document.getElementById('result').innerText = "⏳ جاري رفع ومعالجة الصورة عبر الذكاء الاصطناعي...";
-                setTimeout(() => {
-                    document.getElementById('result').innerText = "✅ تمت معالجة الصورة بنجاح! تم إرسالها عبر البوت.";
-                    // إرسال إشعار أو بيانات لتيليجرام إذا رغبت
-                    tg.sendData(JSON.stringify({action: "image_processed", status: "success"}));
-                }, 2000);
+        function updateFileName() {
+            const input = document.getElementById('imageInput');
+            const label = document.getElementById('fileLabel');
+            if (input.files.length > 0) {
+                label.innerText = "✅ تم اختيار: " + input.files[0].name;
             }
+        }
+
+        function sendDataToBot() {
+            const promptText = document.getElementById('userPrompt').value;
+            const input = document.getElementById('imageInput');
+            
+            if (!promptText && input.files.length === 0) {
+                document.getElementById('result').style.color = "#f87171";
+                document.getElementById('result').innerText = "⚠️ يرجى كتابة ملاحظة أو اختيار صورة على الأقل!";
+                return;
+            }
+
+            document.getElementById('result').style.color = "#38bdf8";
+            document.getElementById('result').innerText = "⏳ جاري إرسال التعليمات ومعالجة الطلب...";
+            
+            setTimeout(() => {
+                document.getElementById('result').style.color = "#34d399";
+                document.getElementById('result').innerText = "✅ تم إرسال طلبك بنجاح إلى البوت!";
+                
+                // إرسال البيانات للبوت وإغلاق النافذة
+                tg.sendData(JSON.stringify({
+                    prompt: promptText,
+                    has_image: input.files.length > 0
+                }));
+            }, 1500);
         }
     </script>
 </body>
@@ -97,7 +120,7 @@ async def web_server():
 def get_main_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
-            text="✨ فتح شاشة الذكاء الاصطناعي والإعلانات", 
+            text="✨ فتح لوحة الذكاء الاصطناعي والتعديل", 
             web_app=WebAppInfo(url=f"{RENDER_WEBAPP_URL}/")
         )]
     ])
@@ -107,10 +130,26 @@ async def start_handler(message: types.Message):
     text = (
         f"أهلاً بك يا {message.from_user.first_name} في بوت الذكاء الاصطناعي والميزات المتقدمة! 🤖\n\n"
         "💬 **الدردشة:** أرسل لي أي سؤال وسأجيبك فوراً.\n"
-        "🖼️ **الصور:** لمعالجة الصور وإزالة الخلفيات بوضوح عالي، استخدم الزر أدناه.\n\n"
-        "اضغط على الزر أدناه لفتح لوحة الخدمات والمكافآت 👇"
+        "🖼️ **الصور:** لمعالجة الصور وإزالة الخلفيات وتعديلها بدقة عالية، استخدم الزر أدناه.\n\n"
+        "اضغط على الزر أدناه لفتح لوحة الخدمات 👇"
     )
     await message.answer(text, reply_markup=get_main_keyboard())
+
+# استقبال البيانات المرسلة من الـ Mini App (مثل التعليمات المكتوبة)
+@dp.message(F.web_app_data)
+async def web_app_data_handler(message: types.Message):
+    try:
+        import json
+        data = json.loads(message.web_app_data.data)
+        user_prompt = data.get("prompt", "بدون تعليمات")
+        
+        await message.answer(
+            f"📥 **تم استلام طلبك من لوحة التحكم بنجاح!**\n\n"
+            f"📝 **التعليمات المكتوبة:** {user_prompt}\n\n"
+            "يرجى إرسال الصورة مباشرة هنا في المحادثة لكي أبدأ بتنفيذ التعديلات عليها فوراً عبر الذكاء الاصطناعي! 👇"
+        )
+    except Exception:
+        await message.answer("✅ تم استلام طلبك بنجاح!")
 
 @dp.message(F.text)
 async def handle_text(message: types.Message):
