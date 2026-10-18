@@ -17,7 +17,6 @@ dp = Dispatcher()
 
 user_prompts = {}
 
-# تصميم الـ Mini App الاحترافي والجميل مع مساحة الإعلانات
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -54,7 +53,6 @@ HTML_CONTENT = """
         <div id="result"></div>
     </div>
 
-    <!-- مساحة إعلانات Adsterra / AdsGram -->
     <div class="ads-box">
         <p style="margin: 0 0 8px 0; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">إعلان مدعوم</p>
         <div style="min-height: 50px; color: #6b7280; font-size: 13px; display: flex; align-items: center; justify-content: center;">
@@ -137,7 +135,6 @@ async def web_app_data_handler(message: types.Message):
 def process_user_image(image_bytes, prompt_text):
     try:
         img = Image.open(BytesIO(image_bytes))
-        
         if "حذف" in prompt_text or "كتابات" in prompt_text or "تنظيف" in prompt_text or "تعديل" in prompt_text:
             enhancer = ImageEnhance.Sharpness(img)
             img = enhancer.enhance(2.0)
@@ -169,7 +166,6 @@ async def handle_photo(message: types.Message):
     image_bytes = downloaded_file.read()
     
     processed_image_bytes = process_user_image(image_bytes, prompt)
-    
     output_file = BufferedInputFile(processed_image_bytes, filename="giloka_ai_edited.jpg")
     
     await message.reply_photo(
@@ -195,7 +191,8 @@ async def handle_text(message: types.Message):
 
 async def main():
     await web_server()
-    print("🚀 البوت جاهز لمعالجة وإرسال الصور المعدلة للمستخدمين...")
+    print("🚀 البوت يعمل الآن بدون أي تضارب وبكامل طاقته...")
+    # هذا السطر يقوم بإلغاء أي جلسة قديمة معلقة على خوادم تيليجرام فوراً
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, drop_pending_updates=True)
 
