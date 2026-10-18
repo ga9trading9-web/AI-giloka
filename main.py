@@ -70,7 +70,7 @@ HTML_CONTENT = """
             const promptText = document.getElementById('userPrompt').value;
             if (!promptText) {
                 document.getElementById('result').style.color = "#f87171";
-                document.getElementById('result'].innerText = "⚠️ يرجى كتابة التعليمات أولاً!";
+                document.getElementById('result').innerText = "⚠️ يرجى كتابة التعليمات أولاً!";
                 return;
             }
 
@@ -134,21 +134,15 @@ async def web_app_data_handler(message: types.Message):
     except Exception:
         await message.answer("✅ تم الاستلام، أرسل صورتك الآن.")
 
-# دالة لتعديل ومعالجة الصورة برمجياً وإرجاعها للمستخدم
 def process_user_image(image_bytes, prompt_text):
     try:
         img = Image.open(BytesIO(image_bytes))
         
-        # إذا طلب المستخدم حذف كتابات أو تنظيف الصورة، نقوم بتحسين وضوح الصورة وتصفيتها
         if "حذف" in prompt_text or "كتابات" in prompt_text or "تنظيف" in prompt_text or "تعديل" in prompt_text:
-            # زيادة حدة ووضوح الصورة وتصفيتها لتخفيف أي نصوص أو شوائب
             enhancer = ImageEnhance.Sharpness(img)
             img = enhancer.enhance(2.0)
-            
-            # فلتر خفيف لتنعيم وتصفية التفاصيل
             img = img.filter(ImageFilter.SMOOTH_MORE)
         else:
-            # تعديل عام للتحسين الفني
             enhancer = ImageEnhance.Color(img)
             img = enhancer.enhance(1.2)
             
@@ -167,7 +161,6 @@ async def handle_photo(message: types.Message):
     
     await bot.send_chat_action(chat_id=message.chat.id, action="upload_photo")
     
-    # تحميل الصورة المرسلة من المستخدم
     photo = message.photo[-1]
     file_info = await bot.get_file(photo.file_id)
     file_path = file_info.file_path
@@ -175,7 +168,6 @@ async def handle_photo(message: types.Message):
     downloaded_file = await bot.download_file(file_path)
     image_bytes = downloaded_file.read()
     
-    # معالجة الصورة وإرجاعها معدلة
     processed_image_bytes = process_user_image(image_bytes, prompt)
     
     output_file = BufferedInputFile(processed_image_bytes, filename="giloka_ai_edited.jpg")
