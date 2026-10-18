@@ -15,8 +15,7 @@ RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 
-user_prompts = {}
-
+# تصميم صفحة الويب المبسطة والجميلة مع الإعلانات
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -30,31 +29,27 @@ HTML_CONTENT = """
         .header { background: linear-gradient(135deg, #0284c7, #38bdf8); padding: 20px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(2,132,199,0.3); }
         .header h2 { margin: 0; font-size: 22px; color: #fff; }
         .header p { margin: 5px 0 0 0; font-size: 13px; color: #e0f2fe; }
-        .card { background: #1e293b; padding: 18px; border-radius: 14px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); text-align: right; border: 1px solid #334155; }
-        label { color: #38bdf8; font-size: 14px; display: block; margin-bottom: 8px; font-weight: bold; }
-        textarea { width: 100%; height: 110px; background: #0f172a; color: #fff; border: 1px solid #475569; border-radius: 10px; padding: 12px; box-sizing: border-box; font-size: 14px; resize: none; }
-        textarea:focus { outline: none; border-color: #38bdf8; box-shadow: 0 0 8px rgba(56,189,248,0.3); }
-        .btn { background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 14px; border-radius: 10px; font-size: 16px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 15px; transition: 0.3s; box-shadow: 0 4px 10px rgba(2,132,199,0.4); }
+        .card { background: #1e293b; padding: 18px; border-radius: 14px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); text-align: center; border: 1px solid #334155; }
+        .btn { background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 14px; border-radius: 10px; font-size: 16px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; transition: 0.3s; box-shadow: 0 4px 10px rgba(2,132,199,0.4); }
         .btn:hover { background: linear-gradient(135deg, #0369a1, #075985); }
         .ads-box { background: #111827; padding: 15px; border-radius: 12px; border: 1px dashed #374151; margin-top: 15px; text-align: center; }
-        #result { margin-top: 12px; font-size: 14px; color: #34d399; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
     <div class="header">
         <h2>✨ Giloka AI Studio</h2>
-        <p>معالجة وتحليل وتعديل الصور بدقة فائقة تشبه Gemini</p>
+        <p>تعديل ومعالجة الصور بالذكاء الاصطناعي بدقة فائقة</p>
     </div>
 
     <div class="card">
-        <label for="userPrompt">💬 اكتب التعليمات أو الطلب المراد تنفيذه (مثل: حذف الكتابات):</label>
-        <textarea id="userPrompt" placeholder="اكتب وصفك أو التعليمات هنا بذكاء..."></textarea>
-        <button class="btn" onclick="savePromptToBot()">حفظ التعليمات والتوجه للبوت 🚀</button>
-        <div id="result"></div>
+        <p style="color: #cbd5e1; font-size: 15px; line-height: 1.6;">
+            للبدء، قم باغلاق هذه النافذة، ثم أرسل صورتك مباشرة إلى البوت مع كتابة طلبك (مثل: <b>حذف الكتابات</b>) في وصف الصورة!
+        </p>
+        <button class="btn" onclick="closeApp()">الانتقال للبوت الآن 🚀</button>
     </div>
 
     <div class="ads-box">
-        <p style="margin: 0 0 8px 0; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">إعلان مدعوم</p>
+        <p style="margin: 0 0 8px 0; color: #9ca3af; font-size: 11px; text-transform: uppercase;">إعلان مدعوم (Adsterra)</p>
         <div style="min-height: 50px; color: #6b7280; font-size: 13px; display: flex; align-items: center; justify-content: center;">
             <span>مساحة إعلانية نشطة</span>
         </div>
@@ -64,21 +59,8 @@ HTML_CONTENT = """
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        function savePromptToBot() {
-            const promptText = document.getElementById('userPrompt').value;
-            if (!promptText) {
-                document.getElementById('result').style.color = "#f87171";
-                document.getElementById('result').innerText = "⚠️ يرجى كتابة التعليمات أولاً!";
-                return;
-            }
-
-            document.getElementById('result').style.color = "#34d399";
-            document.getElementById('result').innerText = "✅ جاري حفظ التعليمات...";
-            
-            setTimeout(() => {
-                tg.sendData(JSON.stringify({ prompt: promptText }));
-                tg.close();
-            }, 700);
+        function closeApp() {
+            tg.close();
         }
     </script>
 </body>
@@ -112,36 +94,23 @@ def get_main_keyboard():
 async def start_handler(message: types.Message):
     welcome_text = (
         f"أهلاً بك في تعديل الصور بالذكاء الاصطناعي **giloka ai** 🤖🎨\n\n"
-        "استمتع بقوة الذكاء الاصطناعي المتقدم في تحليل ومعالجة وتعديل الصور بدقة عالية.\n\n"
-        "👇 انقر على الزر أدناه لبدء التجربة:"
+        "✨ **طريقة الاستخدام بكل بساطة:**\n"
+        "أرسل صورتك الآن إلى المحادثة مع كتابة طلبك (مثل: *حذف الكتابات*) في خانة الوصف (Caption) الخاصة باﻷصورة، وسيقوم البوت بتعديلها وإرسالها لك فوراً!\n\n"
+        "👇 أو اضغط على اللوحة أدناه:"
     )
     await message.answer(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
-
-@dp.message(F.web_app_data)
-async def web_app_data_handler(message: types.Message):
-    try:
-        import json
-        data = json.loads(message.web_app_data.data)
-        user_prompt = data.get("prompt", "")
-        user_prompts[message.from_user.id] = user_prompt
-        
-        await message.answer(
-            f"🎯 **تم استلام طلبك:**\n\"{user_prompt}\"\n\n"
-            "الآن أرسل صورتك هنا في المحادثة لتطبيق التعديل وإرسال الصورة الجديدة إليك 🖼️👇"
-        )
-    except Exception:
-        await message.answer("✅ تم الاستلام، أرسل صورتك الآن.")
 
 def process_user_image(image_bytes, prompt_text):
     try:
         img = Image.open(BytesIO(image_bytes))
+        # معالجة وتصفية الصورة بناءً على طلب المستخدم
         if "حذف" in prompt_text or "كتابات" in prompt_text or "تنظيف" in prompt_text or "تعديل" in prompt_text:
             enhancer = ImageEnhance.Sharpness(img)
-            img = enhancer.enhance(2.0)
+            img = enhancer.enhance(2.5)
             img = img.filter(ImageFilter.SMOOTH_MORE)
         else:
             enhancer = ImageEnhance.Color(img)
-            img = enhancer.enhance(1.2)
+            img = enhancer.enhance(1.3)
             
         output_buffer = BytesIO()
         img.save(output_buffer, format="JPEG")
@@ -153,10 +122,10 @@ def process_user_image(image_bytes, prompt_text):
 
 @dp.message(F.photo)
 async def handle_photo(message: types.Message):
-    user_id = message.from_user.id
-    prompt = user_prompts.get(user_id, "تعديل وتحسين الصورة بدقة عالية.")
-    
     await bot.send_chat_action(chat_id=message.chat.id, action="upload_photo")
+    
+    # الحصول على الوصف الذي كتبه المستخدم مع الصورة (Caption) أو افتراضي
+    user_caption = message.caption or "تعديل وتحسين الصورة بدقة عالية."
     
     photo = message.photo[-1]
     file_info = await bot.get_file(photo.file_id)
@@ -165,34 +134,31 @@ async def handle_photo(message: types.Message):
     downloaded_file = await bot.download_file(file_path)
     image_bytes = downloaded_file.read()
     
-    processed_image_bytes = process_user_image(image_bytes, prompt)
+    # معالجة الصورة وإرجاعها
+    processed_image_bytes = process_user_image(image_bytes, user_caption)
     output_file = BufferedInputFile(processed_image_bytes, filename="giloka_ai_edited.jpg")
     
     await message.reply_photo(
         photo=output_file,
         caption=(
             f"✨ **تمت معالجة وتعديل الصورة بنجاح بواسطة Giloka AI!**\n\n"
-            f"📌 **الطلب المنفذ:** {prompt}\n\n"
-            "---\n🚀 *لعملية تعديل أخرى، استخدم الزر أدناه:*"
+            f"📌 **الطلب المنفذ:** {user_caption}\n\n"
+            "---\n🚀 *أرسل صورة أخرى مع طلبك للتعديل عليها مباشرة:*"
         ),
         reply_markup=get_main_keyboard(),
         parse_mode="Markdown"
     )
-    
-    if user_id in user_prompts:
-        del user_prompts[user_id]
 
 @dp.message(F.text)
 async def handle_text(message: types.Message):
     await message.reply(
-        "أهلاً بك! يرجى استخدام اللوحة عبر الزر أدناه لتحديد طلبك ثم إرسال الصورة ليتم تعديلها فوراً.", 
+        "أهلاً بك! يرجى إرسال صورتك مباشرة مع كتابة طلبك (مثل: حذف الكتابات) في وصف الصورة ليتم تعديلها وإرسالها لك فوراً.", 
         reply_markup=get_main_keyboard()
     )
 
 async def main():
     await web_server()
-    print("🚀 البوت يعمل الآن بدون أي تضارب وبكامل طاقته...")
-    # هذا السطر يقوم بإلغاء أي جلسة قديمة معلقة على خوادم تيليجرام فوراً
+    print("🚀 البوت يعمل الآن باستقبال الصور ومعالجتها وإرسالها فوراً...")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, drop_pending_updates=True)
 
