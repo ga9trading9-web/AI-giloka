@@ -1,139 +1,52 @@
 import asyncio
 import os
-import aiohttp
-import base64
-from io import BytesIO
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import CommandStart
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, BufferedInputFile
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
-# بيانات الاعتماد والتوكن المحدثة
 TELEGRAM_BOT_TOKEN = "8863269193:AAEWc7KaQVNBuXRbfUzZDl1a-89Yi0x-wRc"
 RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 
+# واجهة Web App تدمج إعلاناتك في الأعلى وموقع/أداة الذكاء الاصطناعي الحقيقية بالأسفل
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giloka Image Studio</title>
+    <title>Giloka AI Studio & Ads</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0b0f19; color: #fff; text-align: center; padding: 15px; margin: 0; }
-        .header { background: linear-gradient(135deg, #2563eb, #38bdf8); padding: 16px; border-radius: 14px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(37,99,235,0.3); }
-        .header h2 { margin: 0; font-size: 20px; color: #fff; }
-        .header p { margin: 4px 0 0 0; font-size: 12px; color: #e0f2fe; }
-        .card { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 12px; text-align: right; border: 1px solid #334155; }
-        label { color: #38bdf8; font-size: 13px; display: block; margin-bottom: 6px; font-weight: bold; }
-        textarea { width: 100%; height: 85px; background: #0f172a; color: #fff; border: 1px solid #475569; border-radius: 8px; padding: 10px; box-sizing: border-box; font-size: 13px; resize: none; }
-        textarea:focus { outline: none; border-color: #38bdf8; }
-        .file-upload { border: 2px dashed #475569; padding: 14px; border-radius: 8px; text-align: center; cursor: pointer; background: #0f172a; margin-top: 5px; font-size: 13px; color: #94a3b8; }
-        .file-upload input { display: none; }
-        .btn { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; padding: 13px; border-radius: 8px; font-size: 15px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 12px; box-shadow: 0 4px 10px rgba(37,99,235,0.4); transition: 0.2s; }
-        .btn:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); }
-        .ads-box { background: #111827; padding: 12px; border-radius: 10px; border: 1px dashed #374151; margin-top: 10px; text-align: center; }
-        #status { margin-top: 12px; font-size: 13px; font-weight: bold; text-align: center; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0b0f19; color: #fff; margin: 0; padding: 10px; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+        .ads-container { background: #111827; padding: 10px; border-radius: 10px; border: 1px dashed #374151; text-align: center; margin-bottom: 10px; flex-shrink: 0; }
+        .iframe-container { flex-grow: 1; width: 100%; border-radius: 12px; overflow: hidden; border: 1px solid #334155; background: #fff; }
+        iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
 
-    <div class="ads-box" style="margin-bottom: 12px;">
-        <p style="margin: 0 0 5px 0; color: #9ca3af; font-size: 10px; text-transform: uppercase; letter-spacing: 1px;">إعلان مدعوم (ADSTERRA)</p>
-        <div style="min-height: 45px; color: #6b7280; font-size: 12px; display: flex; align-items: center; justify-content: center;">
+    <!-- مساحة إعلانات Adsterra الخاصة بك في أعلى الشاشة -->
+    <div class="ads-container">
+        <p style="margin: 0 0 3px 0; color: #9ca3af; font-size: 9px; text-transform: uppercase; letter-spacing: 1px;">إعلان مدعوم (ADSTERRA)</p>
+        <div style="min-height: 35px; color: #6b7280; font-size: 11px; display: flex; align-items: center; justify-content: center;">
             <span>مساحة إعلانية نشطة</span>
+            <!-- يمكنك وضع كود إعلان Adsterra المباشر هنا مستقبلاً -->
         </div>
     </div>
 
-    <div class="header">
-        <h2>Giloka Studio AI</h2>
-        <p>استوديو معالجة وتعديل الصور المباشر</p>
-    </div>
-
-    <div class="card">
-        <label for="imageInput">اختر الصورة المراد تعديلها:</label>
-        <div class="file-upload" onclick="document.getElementById('imageInput').click()">
-            <span id="fileName">اضغط هنا لتحديد صورة من هاتفك</span>
-            <input type="file" id="imageInput" accept="image/*" onchange="previewFile()">
-        </div>
-
-        <label for="userPrompt" style="margin-top: 12px;">ماذا تريد أن نفعل بالصورة؟ (مثل: حذف الكتابات):</label>
-        <textarea id="userPrompt" placeholder="اكتب تعليماتك هنا..."></textarea>
-        
-        <button class="btn" id="submitBtn" onclick="processAndSend()">تعديل ومعالجة الصورة 🚀</button>
-        <div id="status"></div>
+    <!-- نافذة موقع أو أداة الذكاء الاصطناعي الجاهزة لتعديل الصور وحذف الكتابات -->
+    <div class="iframe-container">
+        <!-- هنا يمكنك وضع رابط أداة إزالة الكتابات أو موقع الذكاء الاصطناعي الذي ترغب في عرضه -->
+        <iframe src="https://huggingface.co/spaces/akhaliq/latent-consistency-model" title="AI Image Editor"></iframe>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
-        let selectedUserId = tg.initDataUnsafe?.user?.id || 0;
-        let base64Image = "";
-
-        function previewFile() {
-            const file = document.getElementById('imageInput').files[0];
-            if (file) {
-                document.getElementById('fileName').innerText = "✅ تم اختيار: " + file.name;
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    base64Image = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        async function processAndSend() {
-            const promptText = document.getElementById('userPrompt').value;
-            const statusDiv = document.getElementById('status');
-            const submitBtn = document.getElementById('submitBtn');
-
-            if (!base64Image) {
-                statusDiv.style.color = "#f87171";
-                statusDiv.innerText = "يرجى اختيار الصورة أولاً!";
-                return;
-            }
-            if (!promptText) {
-                statusDiv.style.color = "#f87171";
-                statusDiv.innerText = "يرجى كتابة طلب التعديل!";
-                return;
-            }
-
-            statusDiv.style.color = "#38bdf8";
-            statusDiv.innerText = "جاري رفع ومعالجة الصورة... يرجى الانتظار";
-            submitBtn.disabled = true;
-
-            try {
-                const response = await fetch('/api/process', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: selectedUserId,
-                        image: base64Image,
-                        prompt: promptText
-                    })
-                });
-
-                const resData = await response.json();
-                if (resData.status === 'ok') {
-                    statusDiv.style.color = "#34d399";
-                    statusDiv.innerText = "تمت المعالجة بنجاح! تم إرسال الصورة المعدلة إلى المحادثة 🚀";
-                    setTimeout(() => { tg.close(); }, 1200);
-                } else {
-                    statusDiv.style.color = "#f87171";
-                    statusDiv.innerText = "حدث خطأ أثناء المعالجة!";
-                    submitBtn.disabled = false;
-                }
-            } catch (err) {
-                statusDiv.style.color = "#f87171";
-                statusDiv.innerText = "حدث خطأ في الاتصال، يرجى المحاولة مرة أخرى.";
-                submitBtn.disabled = false;
-            }
-        }
     </script>
 </body>
 </html>
@@ -142,68 +55,9 @@ HTML_CONTENT = """
 async def handle_index(request):
     return web.Response(text=HTML_CONTENT, content_type='text/html')
 
-def edit_image_pixels(image_bytes, prompt):
-    try:
-        img = Image.open(BytesIO(image_bytes)).convert("RGB")
-        
-        # معالجة حقيقية لتنظيف وحذف الطبقات النصية وتنعيم الخلفية
-        if "حذف" in prompt or "كتابات" in prompt or "تنظيف" in prompt or "تعديل" in prompt:
-            # تطبيق فلتر التنعيم وإلغاء كتابات الحواف والتأثيرات
-            img = img.filter(ImageFilter.MedianFilter(size=3))
-            enhancer = ImageEnhance.Contrast(img)
-            img = enhancer.enhance(1.2)
-            sharp = ImageEnhance.Sharpness(img)
-            img = sharp.enhance(1.8)
-        else:
-            enhancer = ImageEnhance.Color(img)
-            img = enhancer.enhance(1.3)
-
-        output_buffer = BytesIO()
-        img.save(output_buffer, format="JPEG", quality=95)
-        output_buffer.seek(0)
-        return output_buffer.read()
-    except Exception as e:
-        print(f"Processing Exception: {e}")
-        return image_bytes
-
-async def handle_api_process(request):
-    try:
-        data = await request.json()
-        user_id = data.get("user_id")
-        image_base64 = data.get("image", "")
-        prompt = data.get("prompt", "")
-
-        if not image_base64 or not user_id:
-            return web.json_response({"status": "error", "message": "Missing data"}, status=400)
-
-        header, encoded = image_base64.split(",", 1)
-        image_bytes = base64.b64decode(encoded)
-
-        # تطبيق التعديل البرمجي على الصورة
-        processed_bytes = edit_image_pixels(image_bytes, prompt)
-
-        output_file = BufferedInputFile(processed_bytes, filename="giloka_edited.jpg")
-        await bot.send_photo(
-            chat_id=user_id,
-            photo=output_file,
-            caption=(
-                f"✨ **تمت معالجة وتعديل الصورة بنجاح!**\n\n"
-                f"📌 **الطلب المنفذ:** {prompt}\n\n"
-                "---\n🚀 *لعملية أخرى، افتح الاستوديو عبر الزر أدناه:*"
-            ),
-            reply_markup=get_main_keyboard(),
-            parse_mode="Markdown"
-        )
-
-        return web.json_response({"status": "ok"})
-    except Exception as e:
-        print(f"API Error: {e}")
-        return web.json_response({"status": "error", "message": str(e)}, status=500)
-
 async def web_server():
-    app = web.Application(client_max_size=1024*1024*30)
+    app = web.Application()
     app.router.add_get('/', handle_index)
-    app.router.add_post('/api/process', handle_api_process)
     
     runner = web.AppRunner(app)
     await runner.setup()
@@ -217,7 +71,7 @@ async def web_server():
 def get_main_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
-            text="✨ فتح استوديو الذكاء الاصطناعي", 
+            text="✨ افتح استوديو الذكاء الاصطناعي والإعلانات", 
             web_app=WebAppInfo(url=f"{RENDER_WEBAPP_URL}/")
         )]
     ])
@@ -226,27 +80,20 @@ def get_main_keyboard():
 async def start_handler(message: types.Message):
     welcome_text = (
         f"أهلاً بك يا {message.from_user.first_name} في استوديو **Giloka AI** 🤖🎨\n\n"
-        "انقر على الزر أدناه لفتح الاستوديو، ارفع صورتك واكتب طلبك في نفس الصفحة وسأقوم بتعديلها وإرسالها لك فوراً!"
+        "✨ اضغط على الزر أدناه لفتح الاستوديو المتكامل (تعديل الصور بالذكاء الاصطناعي + إعلاناتك في الأعلى):"
     )
     await message.answer(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
-
-@dp.message(F.photo)
-async def handle_photo(message: types.Message):
-    await message.reply(
-        "أهلاً بك! لرفع الصور وتعديلها عبر الاستوديو مع عرض الإعلانات، يرجى استخدام اللوحة عبر الزر أدناه 👇",
-        reply_markup=get_main_keyboard()
-    )
 
 @dp.message(F.text)
 async def handle_text(message: types.Message):
     await message.reply(
-        "أهلاً بك! افتح الاستوديو عبر الزر أدناه لرفع وتعديل الصور فوراً.", 
+        "أهلاً بك! افتح الاستوديو الذكي عبر الزر أدناه.", 
         reply_markup=get_main_keyboard()
     )
 
 async def main():
     await web_server()
-    print("البوت وسيرفر المعالجة يعملان بنجاح واستقرار 100%...")
+    print("البوت يعمل بنجاح مع عرض الـ Web App والإعلانات...")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, drop_pending_updates=True)
 
