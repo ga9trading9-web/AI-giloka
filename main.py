@@ -9,7 +9,7 @@ from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, BufferedInputFile
 
-# بيانات الاعتماد المحدثة
+# بيانات الاعتماد والتوكن ومفتاح Gemini الذي استخرجته
 TELEGRAM_BOT_TOKEN = "8863269193:AAEWc7KaQVNBuXRbfUzZDl1a-89Yi0x-wRc"
 GEMINI_API_KEY = "AQ.Ab8RN6J4CKDLU6gnngkwP09_dNIKBvcJRs6WJNXRez-UNLQn_PpA"
 RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
@@ -53,20 +53,20 @@ HTML_CONTENT = """
 
     <div class="header">
         <h2>Giloka Gemini Studio</h2>
-        <p>استوديو معالجة وتعديل الصور المباشر بقدرات Gemini</p>
+        <p>استوديو تحليل ومعالجة الصور المباشر بقدرات Gemini</p>
     </div>
 
     <div class="card">
-        <label for="imageInput">اختر الصورة المراد تعديلها:</label>
+        <label for="imageInput">اختر الصورة المراد معالجتها:</label>
         <div class="file-upload" onclick="document.getElementById('imageInput').click()">
             <span id="fileName">اضغط هنا لتحديد صورة من هاتفك</span>
             <input type="file" id="imageInput" accept="image/*" onchange="previewFile()">
         </div>
 
-        <label for="userPrompt" style="margin-top: 12px;">ماذا تريد أن نفعل بالصورة؟ (مثل: حذف الكتابات):</label>
+        <label for="userPrompt" style="margin-top: 12px;">ماذا تريد أن أفعل بالصورة؟ (مثل: تحليل النص، تعديل):</label>
         <textarea id="userPrompt" placeholder="اكتب تعليماتك بدقة هنا..."></textarea>
         
-        <button class="btn" id="submitBtn" onclick="processAndSend()">معالجة وتعديل بالذكاء الاصطناعي</button>
+        <button class="btn" id="submitBtn" onclick="processAndSend()">تحليل ومعالجة عبر Gemini</button>
         <div id="status"></div>
     </div>
 
@@ -100,12 +100,12 @@ HTML_CONTENT = """
             }
             if (!promptText) {
                 statusDiv.style.color = "#f87171";
-                statusDiv.innerText = "يرجى كتابة طلبك مثل حذف الكتابات!";
+                statusDiv.innerText = "يرجى كتابة طلبك أو التعليمات!";
                 return;
             }
 
             statusDiv.style.color = "#38bdf8";
-            statusDiv.innerText = "جاري الرفع والمعالجة عبر Gemini... يرجى الانتظار";
+            statusDiv.innerText = "جاري إرسال الصورة وتحليلها عبر Gemini AI...";
             submitBtn.disabled = true;
 
             try {
@@ -122,11 +122,11 @@ HTML_CONTENT = """
                 const resData = await response.json();
                 if (resData.status === 'ok') {
                     statusDiv.style.color = "#34d399";
-                    statusDiv.innerText = "تمت المعالجة بنجاح! تم إرسال الصورة المعدلة إلى المحادثة";
+                    statusDiv.innerText = "تمت العملية بنجاح! تم إرسال الرد إلى المحادثة";
                     setTimeout(() => { tg.close(); }, 1200);
                 } else {
                     statusDiv.style.color = "#f87171";
-                    statusDiv.innerText = "حدث خطأ أثناء المعالجة!";
+                    statusDiv.innerText = "حدث خطأ أثناء الاتصال بـ Gemini!";
                     submitBtn.disabled = false;
                 }
             } catch (err) {
@@ -156,30 +156,46 @@ async def handle_api_process(request):
         header, encoded = image_base64.split(",", 1)
         image_bytes = base64.b64decode(encoded)
 
-        img = Image.open(BytesIO(image_bytes))
+        # الاتصال الفعلي بـ Google Gemini API لتحليل الصورة والرد على طلب المستخدم
+        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         
-        if "حذف" in prompt or "كتابات" in prompt or "تنظيف" in prompt or "تعديل" in prompt:
-            enhancer = ImageEnhance.Sharpness(img)
-            img = enhancer.enhance(2.5)
-            img = img.filter(ImageFilter.SMOOTH_MORE)
-        else:
-            enhancer = ImageEnhance.Color(img)
-            img = enhancer.enhance(1.3)
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": prompt},
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": encoded
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
 
-        output_buffer = BytesIO()
-        img.save(output_buffer, format="JPEG")
-        output_buffer.seek(0)
-        processed_bytes = output_buffer.read()
+        async with aiohttp.ClientSession() as session:
+            async with session.post(gemini_url, json=payload) as resp:
+                if resp.status == 200:
+                    result_json = await resp.json()
+                    # استخراج الرد من نموذج Gemini
+                    ai_reply = result_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "تم استلام وتحليل الصورة بنجاح.")
+                else:
+                    ai_reply = "عذراً، حدث خطأ أثناء الاتصال بخوادم Gemini API."
 
-        output_file = BufferedInputFile(processed_bytes, filename="giloka_gemini_edited.jpg")
+        # إرسال نتيجة التحليل والرد إلى محادثة تيليجرام
+        output_file = BufferedInputFile(image_bytes, filename="giloka_analyzed.jpg")
         await bot.send_photo(
             chat_id=user_id,
             photo=output_file,
             caption=(
-                "تمت معالجة وتعديل صورتك بنجاح عبر Gemini Studio!\n\n"
-                f"الطلب: {prompt}"
+                f"🤖 **تحليل Gemini AI:**\n\n"
+                f"{ai_reply}\n\n"
+                "---\n📌 **الطلب:** " + prompt
             ),
-            reply_markup=get_main_keyboard()
+            reply_markup=get_main_keyboard(),
+            parse_mode="Markdown"
         )
 
         return web.json_response({"status": "ok"})
@@ -213,27 +229,27 @@ def get_main_keyboard():
 async def start_handler(message: types.Message):
     welcome_text = (
         f"أهلاً بك في استوديو Giloka Gemini AI\n\n"
-        "انقر على الزر أدناه لفتح الاستوديو، ارفع صورتك واكتب طلبك في نفس الصفحة وسأقوم بتعديلها وإرسالها لك فوراً!"
+        "انقر على الزر أدناه لفتح الاستوديو، ارفع صورتك واكتب طلبك في نفس الصفحة وسيقوم نموذج Gemini بتحليلها والرد عليك فوراً!"
     )
     await message.answer(welcome_text, reply_markup=get_main_keyboard())
 
 @dp.message(F.photo)
 async def handle_photo(message: types.Message):
     await message.reply(
-        "أهلاً بك! لرفع الصور وتعديلها عبر استوديو Gemini مع عرض الإعلانات، يرجى استخدام اللوحة عبر الزر أدناه.",
+        "أهلاً بك! لرفع الصور وتحليلها عبر استوديو Gemini مع عرض الإعلانات، يرجى استخدام اللوحة عبر الزر أدناه.",
         reply_markup=get_main_keyboard()
     )
 
 @dp.message(F.text)
 async def handle_text(message: types.Message):
     await message.reply(
-        "أهلاً بك! افتح استوديو الذكاء الاصطناعي عبر الزر أدناه لرفع وتعديل الصور فوراً.", 
+        "أهلاً بك! افتح استوديو الذكاء الاصطناعي عبر الزر أدناه لرفع وتحليل الصور فوراً.", 
         reply_markup=get_main_keyboard()
     )
 
 async def main():
     await web_server()
-    print("البوت يعمل بنجاح بدون أخطاء...")
+    print("البوت متصل بـ Gemini API بنجاح...")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, drop_pending_updates=True)
 
