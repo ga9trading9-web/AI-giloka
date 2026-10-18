@@ -11,7 +11,7 @@ RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 
-# تصميم واجهة الـ Mini App مع إعلاناتك في الأعلى وزر الانتقال المباشر لأداة الذكاء الاصطناعي
+# تصميم واجهة الـ Mini App مع إعلاناتك في الأعلى وزر الانتقال لأقوى أدوات إزالة الكتابة بالذكاء الاصطناعي
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -21,13 +21,14 @@ HTML_CONTENT = """
     <title>Giloka AI Studio & Ads</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0b0f19; color: #fff; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0b0f19; color: #fff; margin: 0; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; box-sizing: border-box; }
         .ads-container { background: #111827; padding: 15px; border-radius: 12px; border: 1px dashed #374151; text-align: center; width: 100%; margin-bottom: 20px; box-sizing: border-box; }
         .card { background: #1e293b; padding: 20px; border-radius: 14px; text-align: center; width: 100%; border: 1px solid #334155; box-sizing: border-box; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         h2 { color: #38bdf8; margin-top: 0; font-size: 20px; }
-        p { color: #94a3b8; font-size: 13px; margin-bottom: 20px; }
-        .btn { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; padding: 14px; border-radius: 10px; font-size: 16px; cursor: pointer; width: 100%; font-weight: bold; box-shadow: 0 4px 12px rgba(37,99,235,0.4); text-decoration: none; display: inline-block; box-sizing: border-box; }
+        p { color: #94a3b8; font-size: 13px; margin-bottom: 20px; line-height: 1.5; }
+        .btn { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; padding: 14px; border-radius: 10px; font-size: 15px; cursor: pointer; width: 100%; font-weight: bold; box-shadow: 0 4px 12px rgba(37,99,235,0.4); text-decoration: none; display: inline-block; box-sizing: border-box; margin-bottom: 10px; }
         .btn:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); }
+        .btn-alt { background: linear-gradient(135deg, #0d9488, #0f766e); box-shadow: 0 4px 12px rgba(13,148,136,0.4); }
     </style>
 </head>
 <body>
@@ -42,19 +43,16 @@ HTML_CONTENT = """
     </div>
 
     <div class="card">
-        <h2>✨ استوديو Giloka الذكي</h2>
-        <p>انقر على الزر أدناه لفتح أقوى موقع ذكاء اصطناعي لتعديل الصور وحذف الكتابات فوراً:</p>
-        <a href="https://huggingface.co/spaces/akhaliq/latent-consistency-model" target="_blank" class="btn" onclick="openAIApp()">فتح أداة الذكاء الاصطناعي 🚀</a>
+        <h2>✨ أداة Giloka لحذف الكتابة من الصور</h2>
+        <p>انقر على أحد الأزرار أدناه لفتح أداة الذكاء الاصطناعي المجانية لإزالة النصوص والكتابات من صورك بنقرة واحدة:</p>
+        
+        <a href="https://clipdrop.co/cleanup" target="_blank" class="btn">فتح أداة Clipdrop Cleanup 🚀</a>
+        <a href="https://theinpaint.com/" target="_blank" class="btn btn-alt">فتح أداة Inpaint السريعة 🛠️</a>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
-
-        function openAIApp() {
-            // يمكن فتح الرابط خارج التيليجرام لضمان عمله بكفاءة عالية
-            window.open("https://huggingface.co/spaces/akhaliq/latent-consistency-model", "_blank");
-        }
     </script>
 </body>
 </html>
