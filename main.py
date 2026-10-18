@@ -1,13 +1,10 @@
 import asyncio
 import os
 import aiohttp
-import base64
-from io import BytesIO
-from PIL import Image, ImageEnhance, ImageFilter
 from aiohttp import web
 from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import CommandStart
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, BufferedInputFile
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 
 TELEGRAM_BOT_TOKEN = "8863269193:AAEWc7KaQVNBuXRbfUzZDl1a-89Yi0x-wRc"
 GEMINI_API_KEY = "AQ.Ab8RN6J4CKDLU6gnngkwP09_dNIKBvcJRs6WJNXRez-UNLQn_PpA"
@@ -22,111 +19,93 @@ HTML_CONTENT = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giloka Gemini Studio</title>
+    <title>Giloka Gemini AI Studio</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #131314; color: #e3e3e3; margin: 0; padding: 12px; box-sizing: border-box; }
-        .ads-container { background: #1e1f20; padding: 10px; border-radius: 10px; border: 1px dashed #444746; text-align: center; margin-bottom: 12px; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #131314; color: #e3e3e3; margin: 0; padding: 10px; display: flex; flex-direction: column; height: 100vh; box-sizing: border-box; }
+        
+        .ads-container { background: #1e1f20; padding: 10px; border-radius: 10px; border: 1px dashed #444746; text-align: center; margin-bottom: 10px; flex-shrink: 0; }
         .ads-title { margin: 0 0 3px 0; color: #8e918f; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; }
-        .card { background: #1e1f20; padding: 15px; border-radius: 14px; border: 1px solid #444746; margin-bottom: 12px; }
-        label { color: #8ab4f8; font-size: 13px; display: block; margin-bottom: 6px; font-weight: bold; }
-        .file-upload { border: 2px dashed #444746; padding: 15px; border-radius: 10px; text-align: center; cursor: pointer; background: #111315; color: #9aa0a6; font-size: 13px; }
-        .file-upload input { display: none; }
-        textarea { width: 100%; height: 80px; background: #111315; color: #e3e3e3; border: 1px solid #444746; border-radius: 10px; padding: 10px; box-sizing: border-box; font-size: 13px; resize: none; margin-top: 8px; outline: none; }
-        textarea:focus { border-color: #8ab4f8; }
-        .btn { background: #8ab4f8; color: #131314; border: none; padding: 12px; border-radius: 10px; font-size: 15px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 12px; transition: 0.2s; }
-        .btn:hover { background: #aecbfa; }
-        #status { margin-top: 10px; font-size: 13px; font-weight: bold; text-align: center; }
+        .ads-box { min-height: 40px; color: #c4c7c5; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+
+        .chat-container { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 5px; margin-bottom: 10px; }
+        .message { padding: 12px 16px; border-radius: 14px; max-width: 85%; font-size: 14px; line-height: 1.5; word-wrap: break-word; }
+        .user-msg { background: #004a77; color: #e3e3e3; align-self: flex-start; border-bottom-right-radius: 4px; }
+        .ai-msg { background: #1e1f20; color: #e3e3e3; align-self: flex-end; border-bottom-left-radius: 4px; border: 1px solid #444746; }
+
+        .input-area { background: #1e1f20; padding: 10px; border-radius: 24px; display: flex; align-items: center; gap: 8px; border: 1px solid #444746; flex-shrink: 0; }
+        .input-area textarea { flex-grow: 1; background: transparent; border: none; color: #e3e3e3; font-size: 14px; resize: none; outline: none; height: 24px; max-height: 80px; padding-top: 2px; }
+        .send-btn { background: #8ab4f8; color: #131314; border: none; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; transition: 0.2s; }
+        .send-btn:hover { background: #aecbfa; }
     </style>
 </head>
 <body>
 
-    <!-- إعلانات Adsterra في أعلى الشاشة -->
     <div class="ads-container">
         <p class="ads-title">إعلان مدعوم (ADSTERRA)</p>
-        <div style="min-height: 35px; color: #c4c7c5; font-size: 11px; display: flex; align-items: center; justify-content: center;">
+        <div class="ads-box">
             <span>مساحة إعلانية نشطة</span>
         </div>
     </div>
 
-    <div class="card">
-        <label>🖼️ حدد الصورة المراد معالجتها:</label>
-        <div class="file-upload" onclick="document.getElementById('imageInput').click()">
-            <span id="fileName">اضغط هنا لاختيار صورة من هاتفك</span>
-            <input type="file" id="imageInput" accept="image/*" onchange="previewFile()">
-        </div>
+    <div class="chat-container" id="chatContainer">
+        <div class="message ai-msg">أهلاً بك يا إبراهيم! أنا نموذج Gemini الذكي. اسألني أي شيء وسأرد عليك فوراً.</div>
+    </div>
 
-        <label style="margin-top: 12px;">💬 اطلب ما تريد تنفيذه بالصورة (مثل تحليل، وصف، أو تعديل):</label>
-        <textarea id="userPrompt" placeholder="اكتب تعليماتك هنا..."></textarea>
-        
-        <button class="btn" id="submitBtn" onclick="processAndSend()">إرسال إلى Gemini 🚀</button>
-        <div id="status"></div>
+    <div class="input-area">
+        <textarea id="userInput" placeholder="اكتب رسالتك هنا..." rows="1" onkeydown="checkEnter(event)"></textarea>
+        <button class="send-btn" onclick="sendMessage()">⬆</button>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
-        let userId = tg.initDataUnsafe?.user?.id || 0;
-        let base64Image = "";
 
-        function previewFile() {
-            const file = document.getElementById('imageInput').files[0];
-            if (file) {
-                document.getElementById('fileName').innerText = "✅ تم اختيار: " + file.name;
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    base64Image = e.target.result;
-                };
-                reader.readAsDataURL(file);
+        function checkEnter(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
             }
         }
 
-        async function processAndSend() {
-            const promptText = document.getElementById('userPrompt').value.trim();
-            const statusDiv = document.getElementById('status');
-            const submitBtn = document.getElementById('submitBtn');
+        async function sendMessage() {
+            const inputField = document.getElementById('userInput');
+            const chatContainer = document.getElementById('chatContainer');
+            const text = inputField.value.trim();
 
-            if (!base64Image) {
-                statusDiv.style.color = "#f28b82";
-                statusDiv.innerText = "⚠️ يرجى اختيار الصورة أولاً!";
-                return;
-            }
-            if (!promptText) {
-                statusDiv.style.color = "#f28b82";
-                statusDiv.innerText = "⚠️ يرجى كتابة الطلب!";
-                return;
-            }
+            if (!text) return;
 
-            statusDiv.style.color = "#8ab4f8";
-            statusDiv.innerText = "⏳ جاري إرسال الصورة والطلب إلى Gemini... يرجى الانتظار";
-            submitBtn.disabled = true;
+            const userDiv = document.createElement('div');
+            userDiv.className = 'message user-msg';
+            userDiv.innerText = text;
+            chatContainer.appendChild(userDiv);
+
+            inputField.value = '';
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            const aiDiv = document.createElement('div');
+            aiDiv.className = 'message ai-msg';
+            aiDiv.innerText = 'جاري التفكير عبر Gemini...';
+            chatContainer.appendChild(aiDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
 
             try {
-                const response = await fetch('/api/process', {
+                const response = await fetch('/api/gemini', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: userId,
-                        image: base64Image,
-                        prompt: promptText
-                    })
+                    body: JSON.stringify({ prompt: text })
                 });
 
                 const data = await response.json();
                 if (response.ok && data.status === 'ok') {
-                    statusDiv.style.color = "#81c995";
-                    statusDiv.innerText = "✅ تم تنفيذ الطلب بنجاح! تم إرسال النتيجة إلى محادثة البوت 🚀";
-                    setTimeout(() => { tg.close(); }, 1500);
+                    aiDiv.innerText = data.reply;
                 } else {
-                    statusDiv.style.color = "#f28b82";
-                    statusDiv.innerText = "⚠️ " + (data.message || "حدث خطأ أثناء المعالجة.");
-                    submitBtn.disabled = false;
+                    aiDiv.innerText = data.reply || 'عذراً، حدث خطأ في الرد.';
                 }
             } catch (err) {
-                statusDiv.style.color = "#f28b82";
-                statusDiv.innerText = "⚠️ حدث خطأ في الاتصال بالخادم.";
-                submitBtn.disabled = false;
+                aiDiv.innerText = 'حدث خطأ في الاتصال بالخادم، يرجى المحاولة مرة أخرى.';
             }
+            chatContainer.scrollTop = chatContainer.scrollHeight;
         }
     </script>
 </body>
@@ -136,62 +115,38 @@ HTML_CONTENT = """
 async def handle_index(request):
     return web.Response(text=HTML_CONTENT, content_type='text/html')
 
-async def handle_process(request):
+async def handle_gemini_api(request):
     try:
         data = await request.json()
-        user_id = data.get("user_id")
-        image_base64 = data.get("image", "")
         prompt = data.get("prompt", "")
 
-        if not image_base64 or not user_id or not prompt:
-            return web.json_response({"status": "error", "message": "بيانات غير مكتملة"}, status=400)
+        if not prompt:
+            return web.json_response({"status": "error", "reply": "الرسالة فارغة"}, status=400)
 
-        header, encoded = image_base64.split(",", 1)
-        image_bytes = base64.b64decode(encoded)
-
-        # الاتصال بـ Gemini API لمعالجة الصورة والطلب بصرياً ونضج الرد
+        # استخدام نموذج Gemini الرسمي عبر الـ API
         gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": prompt},
-                        {"inline_data": {"mime_type": "image/jpeg", "data": encoded}}
-                    ]
-                }
-            ]
+            "contents": [{"parts": [{"text": prompt}]}]
         }
 
         async with aiohttp.ClientSession() as session:
-            async with session.post(gemini_url, json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+            async with session.post(gemini_url, json=payload, timeout=aiohttp.ClientTimeout(total=25)) as resp:
                 if resp.status == 200:
                     result_json = await resp.json()
-                    ai_reply = result_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "تمت معالجة الطلب.")
+                    ai_reply = result_json.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "عذراً، لم أستطع صياغة رد.")
+                    return web.json_response({"status": "ok", "reply": ai_reply})
                 else:
-                    ai_reply = "عذراً، لمطابقة الطلب حدث خطأ من خوادم الذكاء الاصطناعي."
-
-        # إرسال الصورة الأصلية والنتيجة الذكية للمستخدم مباشرة في شات البوت
-        photo_file = BufferedInputFile(image_bytes, filename="giloka_input.jpg")
-        await bot.send_photo(
-            chat_id=user_id,
-            photo=photo_file,
-            caption=(
-                f"🤖 **نتيجة تحليل وتنفيذ طلب Gemini:**\n\n"
-                f"📌 **الطلب:** {prompt}\n\n"
-                f"💡 **الرد:**\n{ai_reply}"
-            ),
-            parse_mode="Markdown"
-        )
-
-        return web.json_response({"status": "ok"})
+                    err_text = await resp.text()
+                    print(f"Gemini API Error details: {err_text}")
+                    return web.json_response({"status": "error", "reply": "عذراً، المفتاح أو خوادم Gemini واجهت ضغطاً، يرجى المحاولة لاحقاً."}, status=500)
     except Exception as e:
-        print(f"API Error: {e}")
-        return web.json_response({"status": "error", "message": str(e)}, status=500)
+        print(f"Server Exception: {e}")
+        return web.json_response({"status": "error", "reply": "حدث خطأ داخلي في معالجة الطلب."}, status=500)
 
 async def web_server():
-    app = web.Application(client_max_size=1024*1024*35)
+    app = web.Application()
     app.router.add_get('/', handle_index)
-    app.router.add_post('/api/process', handle_process)
+    app.router.add_post('/api/gemini', handle_gemini_api)
     
     runner = web.AppRunner(app)
     await runner.setup()
@@ -214,7 +169,7 @@ def get_main_keyboard():
 async def start_handler(message: types.Message):
     welcome_text = (
         f"أهلاً بك يا {message.from_user.first_name} في استوديو **Giloka Gemini AI** 🤖✨\n\n"
-        "انقر على الزر أدناه لرفع صورتك وكتابة طلبك للحصول على النتيجة الفورية:"
+        "انقر على الزر أدناه لفتح واجهة المحادثة وإعلانات Adsterra:"
     )
     await message.answer(welcome_text, reply_markup=get_main_keyboard())
 
@@ -224,7 +179,7 @@ async def handle_text(message: types.Message):
 
 async def main():
     await web_server()
-    print("البوت يعمل بكفاءة تامة...")
+    print("البوت وواجهة Gemini يعملان بكفاءة تامة...")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, drop_pending_updates=True)
 
