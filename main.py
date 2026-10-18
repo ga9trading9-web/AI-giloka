@@ -9,9 +9,9 @@ from aiogram import Bot, Dispatcher, F, types
 from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo, BufferedInputFile
 
-# بيانات الاعتماد
-TELEGRAM_BOT_TOKEN = "8863269193:AAFC8GH3QlMIaypS7xZLoSHb0bhoyfGKuuc"
-GEMINI_API_KEY = "AQ.Ab8RN6J4CKDLU6gnngkwP09_dNIKBvcJRs6WJNXRez-UNLQn_PpA"  # المفتاح الخاص بك
+# بيانات الاعتماد المحدثة
+TELEGRAM_BOT_TOKEN = "8863269193:AAEWc7KaQVNBuXRbfUzZDl1a-89Yi0x-wRc"  # التوكن الجديد
+GEMINI_API_KEY = "AQ.Ab8RN6J4CKDLU6gnngkwP09_dNIKBvcJRs6WJNXRez-UNLQn_PpA"
 RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -55,7 +55,7 @@ HTML_CONTENT = """
 
     <div class="header">
         <h2>✨ Giloka Gemini Studio</h2>
-        <p>استوديو معالجة وتعديل الصور المباشر قدرات Gemini</p>
+        <p>استوديو معالجة وتعديل الصور المباشر بقدرات Gemini</p>
     </div>
 
     <div class="card">
@@ -142,11 +142,9 @@ HTML_CONTENT = """
 </html>
 """
 
-# دالة التعامل مع فتح الصفحة الرئيسية
 async def handle_index(request):
     return web.Response(text=HTML_CONTENT, content_type='text/html')
 
-# دالة معالجة واستلام الصورة من الـ Web App مباشرة عبر HTTP POST (لتفادي قيود حجم الملفات في تيليجرام)
 async def handle_api_process(request):
     try:
         data = await request.json()
@@ -157,11 +155,9 @@ async def handle_api_process(request):
         if not image_base64 or not user_id:
             return web.json_response({"status": "error", "message": "بيانات غير مكتملة"}, status=400)
 
-        # تحويل Base64 إلى بايتات صورة
         header, encoded = image_base64.split(",", 1)
         image_bytes = base64.b64decode(encoded)
 
-        # معالجة الصورة باستخدام Pillow لتنفيذ الطلب (مثل حذف الكتابات وتنقية الحواف)
         img = Image.open(BytesIO(image_bytes))
         
         if "حذف" in prompt or "كتابات" in prompt or "تنظيف" in prompt or "تعديل" in prompt:
@@ -177,7 +173,6 @@ async def handle_api_process(request):
         output_buffer.seek(0)
         processed_bytes = output_buffer.read()
 
-        # إرسال الصورة المعدلة فوراً إلى محادثة تيليجرام الخاصة بالمستخدم
         output_file = BufferedInputFile(processed_bytes, filename="giloka_gemini_edited.jpg")
         await bot.send_photo(
             chat_id=user_id,
@@ -197,7 +192,7 @@ async def handle_api_process(request):
         return web.json_response({"status": "error", "message": str(e)}, status=500)
 
 async def web_server():
-    app = web.Application(client_max_size=1024*1024*30) # قبول صور حتى 30 ميجابايت
+    app = web.Application(client_max_size=1024*1024*30)
     app.router.add_get('/', handle_index)
     app.router.add_post('/api/process', handle_api_process)
     
@@ -224,6 +219,32 @@ async def start_handler(message: types.Message):
         f"أهلاً بك يا {message.from_user.first_name} في استوديو **Giloka Gemini AI** 🤖🎨\n\n"
         "✨ **الرفع والتعديل المباشر:**\n"
         "انقر على الزر أدناه لفتح الاستوديو، ارفع صورتك واكتب طلبك (مثل: *حذف الكتابات*) في نفس الصفحة وسأقوم بتعديلها وإرسالها لك فوراً!\n\n"
+        "👇 انقر للبدء:"
+    )
+    await message.answer(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
+
+@dp.message(F.photo)
+async def handle_photo(message: types.Message):
+    await message.reply(
+        "أهلاً بك! لرفع الصور وتعديلها عبر استوديو Gemini مع عرض الإعلانات، يرجى استخدام اللوحة عبر الزر أدناه 🖼️👇",
+        reply_markup=get_main_keyboard()
+    )
+
+@dp.message(F.text)
+async def handle_text(message: types.Message):
+    await message.reply(
+        "أهلاً بك! افتح استوديو الذكاء الاصطناعي عبر الزر أدناه لرفع وتعديل الصور فوراً.", 
+        reply_markup=get_main_keyboard()
+    )
+
+async def main():
+    await web_server()
+    print("🚀 البوت واستوديو Gemini يعملان بالتوكن الجديد...")
+    await bot.delete_webhook(drop_pending_updates=True)
+    await dp.start_polling(bot, drop_pending_updates=True)
+
+if __name__ == "__main__":
+    asyncio.run(main())يو، ارفع صورتك واكتب طلبك (مثل: *حذف الكتابات*) في نفس الصفحة وسأقوم بتعديلها وإرسالها لك فوراً!\n\n"
         "👇 انقر للبدء:"
     )
     await message.answer(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
