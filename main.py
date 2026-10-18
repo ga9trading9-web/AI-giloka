@@ -1,6 +1,7 @@
 import asyncio
 import os
 import aiohttp
+import base64
 from io import BytesIO
 from PIL import Image, ImageFilter, ImageEnhance
 from aiohttp import web
@@ -15,7 +16,9 @@ RENDER_WEBAPP_URL = "https://ai-giloka.onrender.com"
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
 
-# تصميم صفحة الويب المبسطة والجميلة مع الإعلانات
+user_storage = {}
+
+# تصميم الـ Mini App المتطور مثل Gemini تماماً (رفع صورة + كتابة الوصف في نفس الصفحة)
 HTML_CONTENT = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -25,32 +28,45 @@ HTML_CONTENT = """
     <title>تعديل الصور بالذكاء الاصطناعي Giloka AI</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0b0f19; color: #fff; text-align: center; padding: 20px; margin: 0; }
-        .header { background: linear-gradient(135deg, #0284c7, #38bdf8); padding: 20px; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(2,132,199,0.3); }
-        .header h2 { margin: 0; font-size: 22px; color: #fff; }
-        .header p { margin: 5px 0 0 0; font-size: 13px; color: #e0f2fe; }
-        .card { background: #1e293b; padding: 18px; border-radius: 14px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); text-align: center; border: 1px solid #334155; }
-        .btn { background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 14px; border-radius: 10px; font-size: 16px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; transition: 0.3s; box-shadow: 0 4px 10px rgba(2,132,199,0.4); }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0b0f19; color: #fff; text-align: center; padding: 15px; margin: 0; }
+        .header { background: linear-gradient(135deg, #0284c7, #38bdf8); padding: 16px; border-radius: 14px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(2,132,199,0.3); }
+        .header h2 { margin: 0; font-size: 20px; color: #fff; }
+        .header p { margin: 4px 0 0 0; font-size: 12px; color: #e0f2fe; }
+        .card { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 12px; text-align: right; border: 1px solid #334155; }
+        label { color: #38bdf8; font-size: 13px; display: block; margin-bottom: 6px; font-weight: bold; }
+        textarea { width: 100%; height: 80px; background: #0f172a; color: #fff; border: 1px solid #475569; border-radius: 8px; padding: 10px; box-sizing: border-box; font-size: 13px; resize: none; }
+        textarea:focus { outline: none; border-color: #38bdf8; }
+        .file-upload { border: 2px dashed #475569; padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; background: #0f172a; margin-top: 5px; font-size: 13px; color: #94a3b8; }
+        .file-upload input { display: none; }
+        .btn { background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 15px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 12px; box-shadow: 0 4px 10px rgba(2,132,199,0.4); }
         .btn:hover { background: linear-gradient(135deg, #0369a1, #075985); }
-        .ads-box { background: #111827; padding: 15px; border-radius: 12px; border: 1px dashed #374151; margin-top: 15px; text-align: center; }
+        .ads-box { background: #111827; padding: 12px; border-radius: 10px; border: 1px dashed #374151; margin-top: 10px; text-align: center; }
+        #status { margin-top: 10px; font-size: 13px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="header">
         <h2>✨ Giloka AI Studio</h2>
-        <p>تعديل ومعالجة الصور بالذكاء الاصطناعي بدقة فائقة</p>
+        <p>ارفع صورتك واكتب طلبك مثل Gemini تماماً</p>
     </div>
 
     <div class="card">
-        <p style="color: #cbd5e1; font-size: 15px; line-height: 1.6;">
-            للبدء، قم باغلاق هذه النافذة، ثم أرسل صورتك مباشرة إلى البوت مع كتابة طلبك (مثل: <b>حذف الكتابات</b>) في وصف الصورة!
-        </p>
-        <button class="btn" onclick="closeApp()">الانتقال للبوت الآن 🚀</button>
+        <label for="imageInput">🖼️ اختر أو ارفع الصورة:</label>
+        <div class="file-upload" onclick="document.getElementById('imageInput').click()">
+            <span id="fileName">اضغط هنا لاختيار الصورة من جهازك 📁</span>
+            <input type="file" id="imageInput" accept="image/*" onchange="previewFile()">
+        </div>
+
+        <label for="userPrompt" style="margin-top: 12px;">💬 ماذا تريد أن أفعل بالصورة؟ (مثل: حذف الكتابات):</label>
+        <textarea id="userPrompt" placeholder="اكتب تعليماتك هنا..."></textarea>
+        
+        <button class="btn" onclick="sendDataToBot()">إرسال للبوت للمعالجة 🚀</button>
+        <div id="status"></div>
     </div>
 
     <div class="ads-box">
-        <p style="margin: 0 0 8px 0; color: #9ca3af; font-size: 11px; text-transform: uppercase;">إعلان مدعوم (Adsterra)</p>
-        <div style="min-height: 50px; color: #6b7280; font-size: 13px; display: flex; align-items: center; justify-content: center;">
+        <p style="margin: 0 0 5px 0; color: #9ca3af; font-size: 10px; text-transform: uppercase;">إعلان مدعوم (Adsterra)</p>
+        <div style="min-height: 40px; color: #6b7280; font-size: 12px; display: flex; align-items: center; justify-content: center;">
             <span>مساحة إعلانية نشطة</span>
         </div>
     </div>
@@ -58,9 +74,40 @@ HTML_CONTENT = """
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
+        let base64Image = "";
 
-        function closeApp() {
-            tg.close();
+        function previewFile() {
+            const file = document.getElementById('imageInput').files[0];
+            if (file) {
+                document.getElementById('fileName').innerText = "✅ تم اختيار: " + file.name;
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    base64Image = reader.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function sendDataToBot() {
+            const promptText = document.getElementById('userPrompt').value;
+            if (!base64Image) {
+                document.getElementById('status').style.color = "#f87171";
+                document.getElementById('status').innerText = "⚠️ يرجى اختيار الصورة أولاً!";
+                return;
+            }
+            if (!promptText) {
+                document.getElementById('status').style.color = "#f87171";
+                document.getElementById('status').innerText = "⚠️ يرجى كتابة التعليمات أو الطلب!";
+                return;
+            }
+
+            document.getElementById('status').style.color = "#34d399";
+            document.getElementById('status').innerText = "⏳ جاري إرسال الصورة والمعالجة...";
+
+            setTimeout(() => {
+                tg.sendData(JSON.stringify({ image: base64Image, prompt: promptText }));
+                tg.close();
+            }, 800);
         }
     </script>
 </body>
@@ -71,7 +118,7 @@ async def handle_index(request):
     return web.Response(text=HTML_CONTENT, content_type='text/html')
 
 async def web_server():
-    app = web.Application()
+    app = web.Application(client_max_size=1024*1024*20) # السماح برفع صور بحجم كبير
     app.router.add_get('/', handle_index)
     runner = web.AppRunner(app)
     await runner.setup()
@@ -85,7 +132,7 @@ async def web_server():
 def get_main_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
-            text="✨ اضغط لاستخدام الذكاء الاصطناعي", 
+            text="✨ فتح استوديو الذكاء الاصطناعي (Gemini Style)", 
             web_app=WebAppInfo(url=f"{RENDER_WEBAPP_URL}/")
         )]
     ])
@@ -93,17 +140,16 @@ def get_main_keyboard():
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
     welcome_text = (
-        f"أهلاً بك في تعديل الصور بالذكاء الاصطناعي **giloka ai** 🤖🎨\n\n"
-        "✨ **طريقة الاستخدام بكل بساطة:**\n"
-        "أرسل صورتك الآن إلى المحادثة مع كتابة طلبك (مثل: *حذف الكتابات*) في خانة الوصف (Caption) الخاصة باﻷصورة، وسيقوم البوت بتعديلها وإرسالها لك فوراً!\n\n"
-        "👇 أو اضغط على اللوحة أدناه:"
+        f"أهلاً بك يا {message.from_user.first_name} في استوديو **giloka ai** 🤖🎨\n\n"
+        "✨ **تجربة شبيهة بـ Gemini تماماً:**\n"
+        "اضغط على الزر أدناه لفتح واجهة الاستوديو، ارفع صورتك واكتب طلبك (مثل: *حذف الكتابات*) في نفس الصفحة وسأقوم بتعديلها وإرسالها لك فوراً!\n\n"
+        "👇 انقر للبدء:"
     )
     await message.answer(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
 
-def process_user_image(image_bytes, prompt_text):
+def process_image(image_bytes, prompt_text):
     try:
         img = Image.open(BytesIO(image_bytes))
-        # معالجة وتصفية الصورة بناءً على طلب المستخدم
         if "حذف" in prompt_text or "كتابات" in prompt_text or "تنظيف" in prompt_text or "تعديل" in prompt_text:
             enhancer = ImageEnhance.Sharpness(img)
             img = enhancer.enhance(2.5)
@@ -117,48 +163,61 @@ def process_user_image(image_bytes, prompt_text):
         output_buffer.seek(0)
         return output_buffer.read()
     except Exception as e:
-        print(f"Image Processing Error: {e}")
+        print(f"Error processing image: {e}")
         return image_bytes
+
+@dp.message(F.web_app_data)
+async def web_app_data_handler(message: types.Message):
+    try:
+        import json
+        data = json.loads(message.web_app_data.data)
+        image_base64 = data.get("image", "")
+        user_prompt = data.get("prompt", "")
+        
+        if image_base64:
+            await bot.send_chat_action(chat_id=message.chat.id, action="upload_photo")
+            
+            # استخراج بايتات الصورة من الـ Base64 المرسل من الـ Mini App
+            header, encoded = image_base64.split(",", 1)
+            image_bytes = base64.b64decode(encoded)
+            
+            # معالجة الصورة
+            processed_bytes = process_image(image_bytes, user_prompt)
+            output_file = BufferedInputFile(processed_bytes, filename="giloka_ai_gemini.jpg")
+            
+            await message.answer_photo(
+                photo=output_file,
+                caption=(
+                    f"✨ **تمت معالجة الصورة بنجاح (Gemini Style)!**\n\n"
+                    f"📌 **الطلب:** {user_prompt}\n\n"
+                    "---\n🚀 *لعملية أخرى، افتح الاستوديو عبر الزر أدناه:*"
+                ),
+                reply_markup=get_main_keyboard(),
+                parse_mode="Markdown"
+            )
+        else:
+            await message.answer("⚠️ لم يتم استلام الصورة، يرجى المحاولة مرة أخرى.")
+    except Exception as e:
+        print(f"WebApp Data Error: {e}")
+        await message.answer("حدث خطأ أثناء معالجة الصورة، يرجى المحاولة مرة أخرى.")
 
 @dp.message(F.photo)
 async def handle_photo(message: types.Message):
-    await bot.send_chat_action(chat_id=message.chat.id, action="upload_photo")
-    
-    # الحصول على الوصف الذي كتبه المستخدم مع الصورة (Caption) أو افتراضي
-    user_caption = message.caption or "تعديل وتحسين الصورة بدقة عالية."
-    
-    photo = message.photo[-1]
-    file_info = await bot.get_file(photo.file_id)
-    file_path = file_info.file_path
-    
-    downloaded_file = await bot.download_file(file_path)
-    image_bytes = downloaded_file.read()
-    
-    # معالجة الصورة وإرجاعها
-    processed_image_bytes = process_user_image(image_bytes, user_caption)
-    output_file = BufferedInputFile(processed_image_bytes, filename="giloka_ai_edited.jpg")
-    
-    await message.reply_photo(
-        photo=output_file,
-        caption=(
-            f"✨ **تمت معالجة وتعديل الصورة بنجاح بواسطة Giloka AI!**\n\n"
-            f"📌 **الطلب المنفذ:** {user_caption}\n\n"
-            "---\n🚀 *أرسل صورة أخرى مع طلبك للتعديل عليها مباشرة:*"
-        ),
-        reply_markup=get_main_keyboard(),
-        parse_mode="Markdown"
+    await message.reply(
+        "أهلاً بك! لرفع الصور وكتابة الطلب معاً مثل Gemini، يرجى استخدام اللوحة عبر الزر أدناه 🖼️👇",
+        reply_markup=get_main_keyboard()
     )
 
 @dp.message(F.text)
 async def handle_text(message: types.Message):
     await message.reply(
-        "أهلاً بك! يرجى إرسال صورتك مباشرة مع كتابة طلبك (مثل: حذف الكتابات) في وصف الصورة ليتم تعديلها وإرسالها لك فوراً.", 
+        "أهلاً بك! افتح الاستوديو الذكي عبر الزر أدناه لرفع الصور وتعديلها فوراً.", 
         reply_markup=get_main_keyboard()
     )
 
 async def main():
     await web_server()
-    print("🚀 البوت يعمل الآن باستقبال الصور ومعالجتها وإرسالها فوراً...")
+    print("🚀 البوت يعمل الآن بواجهة Mini App متطورة تشبه Gemini تماماً...")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, drop_pending_updates=True)
 
