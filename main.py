@@ -79,7 +79,7 @@ HTML_CONTENT = """
         function previewFile() {
             const file = document.getElementById('imageInput').files[0];
             if (file) {
-                document.getElementById('fileNamechno').innerText = "تم اختيار: " + file.name;
+                document.getElementById('fileName').innerText = "✅ تم اختيار: " + file.name;
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     base64Image = e.target.result;
